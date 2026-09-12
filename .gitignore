@@ -17,3 +17,7 @@ graph-*.jpeg
 hero-logo.jpeg
 src/content/docs/docs/changelog.md
 docs-*.jpeg
+
+# retrieval eval harness: code lives in eval/, data never does
+eval/dist/
+eval/data/
