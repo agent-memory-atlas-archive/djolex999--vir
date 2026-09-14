@@ -20,7 +20,7 @@ function opt(name: string): string | undefined {
 const USAGE = `usage: npm run distill:ab -- <command>
 
   homes         prepare shared/control/challenger homes under ~/.vir/eval/distill/homes [--refresh]
-  run           classify once, then distill every sample transcript under both arms [--dry-run] [--reclassify]
+  run           classify once, then distill every sample transcript under both arms [--dry-run] [--reclassify] [--resume <dir>]
   grading-set   shuffle the latest run into opaque-id notes + sealed mapping [--seed N] [--refresh]
   judge         model preview of the rubric (sealed, not shown)
   report        unblind and write <run>/report.md (requires every note graded)
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
       await prepareDistillHomes({ refresh: flag("refresh") });
       return;
     case "run":
-      await runDistillAb({ dryRun: flag("dry-run"), reclassify: flag("reclassify") });
+      await runDistillAb({ dryRun: flag("dry-run"), reclassify: flag("reclassify"), resumeDir: opt("resume") });
       return;
     case "grading-set":
       buildAndWriteGradingSet(opt("run") ?? latestRunDir(), seed, flag("refresh"));

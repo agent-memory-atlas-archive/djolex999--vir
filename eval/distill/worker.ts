@@ -20,6 +20,7 @@ import { VaultWriter } from "../../src/pipeline/writer.js";
 import { StateDb } from "../../src/state/db.js";
 import { CONTROL_TEMPLATE, extractPromptTemplate, makeBuilder, promptHash } from "./prompts.js";
 import type { Arm } from "./gradingSet.js";
+import { pendingEntries } from "./resume.js";
 
 export interface SampleEntry {
   idx: number;
@@ -123,9 +124,18 @@ async function distillStage(): Promise<void> {
   const db = new StateDb();
   const writer = new VaultWriter(cfg, db);
   const costLogPath = join(home, ".vir", "cost.log");
-  const results: ArmResult[] = [];
-  for (const c of classified) {
-    if (c.skipped) continue;
+  const outPath = opt("out");
+  const results: ArmResult[] = existsSync(outPath)
+    ? (JSON.parse(readFileSync(outPath, "utf8")) as ArmOutput).results
+    : [];
+  const hash = promptHash(template);
+  const flush = (): void => {
+    const output: ArmOutput = { arm, promptHash: hash, home, results };
+    writeFileSync(outPath, JSON.stringify(output, null, 2));
+  };
+  const todo = pendingEntries(classified, results);
+  process.stdout.write(`[${arm}] ${results.length} already done, ${todo.length} to distill\n`);
+  for (const c of todo) {
     const { parsed, scrubbedContent } = prepared(c.path, cfg.filterToolCalls);
     const t0 = Date.now();
     const body = await distiller.distill(parsed, scrubbedContent, c.classification, c.model);
@@ -157,10 +167,10 @@ async function distillStage(): Promise<void> {
       notePath: written[0] ?? "",
     });
     process.stdout.write(`[${arm}] #${c.idx} ${c.model} ${results[results.length - 1]!.words}w ${outputTokens ?? "?"}tok${outputTokens !== null && outputTokens >= MAX_TOKENS ? " CAP" : ""} ${ms}ms\n`);
+    flush();
   }
   db.close();
-  const output: ArmOutput = { arm, promptHash: promptHash(template), home, results };
-  writeFileSync(opt("out"), JSON.stringify(output, null, 2));
+  flush();
 }
 
 async function main(): Promise<void> {

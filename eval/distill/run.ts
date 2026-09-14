@@ -42,7 +42,7 @@ const RATES: Record<string, { inp: number; out: number }> = {
   "claude-haiku-4-5": { inp: 1, out: 5 },
 };
 
-export async function runDistillAb(opts: { dryRun: boolean; reclassify: boolean }): Promise<string> {
+export async function runDistillAb(opts: { dryRun: boolean; reclassify: boolean; resumeDir?: string }): Promise<string> {
   if (!existsSync(WORKER_JS)) throw new Error(`${WORKER_JS} missing — run npm run eval:build`);
   if (!existsSync(DISTILL_SAMPLE_PATH)) throw new Error(`${DISTILL_SAMPLE_PATH} missing (Phase 1 sample)`);
   await prepareDistillHomes();
@@ -74,10 +74,15 @@ export async function runDistillAb(opts: { dryRun: boolean; reclassify: boolean 
     return "";
   }
 
-  const ts = new Date().toISOString().replace(/[:.]/g, "-");
-  const runDir = join(DISTILL_RUNS_DIR, ts);
+  // --resume <dir>: keep the manifest and every arm's partial output; the
+  // workers skip transcripts they already wrote. Never re-bills a success.
+  const runDir = opts.resumeDir ?? join(DISTILL_RUNS_DIR, new Date().toISOString().replace(/[:.]/g, "-"));
   mkdirSync(runDir, { recursive: true });
   const challengerMd = readFileSync(CHALLENGER_MD_PATH, "utf8");
+  if (opts.resumeDir) {
+    if (!existsSync(join(runDir, "manifest.json"))) throw new Error(`${runDir} has no manifest.json`);
+    process.stdout.write(`resuming ${runDir}\n`);
+  } else {
   const manifest = {
     version: 1,
     createdAt: new Date().toISOString(),
@@ -93,6 +98,7 @@ export async function runDistillAb(opts: { dryRun: boolean; reclassify: boolean 
     classificationsPath: DISTILL_CLASSIFICATIONS_PATH,
   };
   writeFileSync(join(runDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  }
   for (const arm of ["control", "challenger"] as const) {
     runWorker(arm, [
       "--stage", "distill", "--arm", arm,
