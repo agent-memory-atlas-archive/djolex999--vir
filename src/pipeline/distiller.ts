@@ -398,6 +398,34 @@ export class ClassifyParseError extends Error {
   }
 }
 
+// The distill prompt as one pure function, so the text has exactly one home
+// and an experiment can swap it without touching routing, retry, or cost
+// logging. Production never passes a builder; the eval harness does.
+export type DistillPromptBuilder = (
+  session: ParsedSession,
+  cls: Classification,
+  scrubbedContent: string,
+) => string;
+
+export function buildDistillPrompt(
+  session: ParsedSession,
+  cls: Classification,
+  scrubbedContent: string,
+): string {
+  return `Extract durable knowledge from this Claude Code session.
+
+Output a markdown page with these sections (no preamble, start with '## Summary'):
+- ## Summary (2-3 sentences)
+- ## What Was Learned
+- ## Context (project: ${cls.project}, category: ${cls.category}, date: ${session.startedAt ?? "unknown"})
+
+Be concise. Only include information a future developer would reuse.
+Omit implementation details that won't generalize.
+
+Session:
+${scrubbedContent}`;
+}
+
 export class Distiller {
   private client: Anthropic | null;
   private cfg: Config;
@@ -406,9 +434,14 @@ export class Distiller {
   // When set, --force-model wins over hybrid routing — every session uses
   // distillModel and selectDistillModel is never consulted.
   private forced: boolean;
+  private distillPrompt: DistillPromptBuilder;
 
-  constructor(cfg: Config, opts: { forceDistillModel?: string } = {}) {
+  constructor(
+    cfg: Config,
+    opts: { forceDistillModel?: string; distillPrompt?: DistillPromptBuilder } = {},
+  ) {
     this.cfg = cfg;
+    this.distillPrompt = opts.distillPrompt ?? buildDistillPrompt;
     this.client = maybeAnthropicClient(cfg);
     this.classifyModel = normalizeModelName(cfg.models.classify, cfg.provider);
     // --force-model overrides only the distill model, for this run only.
@@ -473,18 +506,7 @@ ${scrubbedSummary}`;
     cls: Classification,
     model: string = this.distillModel,
   ): Promise<string> {
-    const prompt = `Extract durable knowledge from this Claude Code session.
-
-Output a markdown page with these sections (no preamble, start with '## Summary'):
-- ## Summary (2-3 sentences)
-- ## What Was Learned
-- ## Context (project: ${cls.project}, category: ${cls.category}, date: ${session.startedAt ?? "unknown"})
-
-Be concise. Only include information a future developer would reuse.
-Omit implementation details that won't generalize.
-
-Session:
-${scrubbedContent}`;
+    const prompt = this.distillPrompt(session, cls, scrubbedContent);
 
     const text = await withRateLimitRetry(() =>
       callLLM(this.cfg, this.client, {
