@@ -7,7 +7,7 @@ export const EVAL_MODEL = "claude-sonnet-5";
 // HOME, real auth) and lands in ~/.vir/cost.log under an `eval-*` stage with
 // `estimated_cost_usd: null` — the subscription-quota convention from 0.17.0.
 export async function callJudge(
-  stage: "eval-label" | "eval-query-gen",
+  stage: "eval-label" | "eval-query-gen" | "eval-distill-judge",
   prompt: string,
   session: string,
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {

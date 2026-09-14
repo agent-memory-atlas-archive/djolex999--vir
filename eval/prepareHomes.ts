@@ -14,7 +14,7 @@ function log(line: string): void {
 
 // Consistent copy of the live DB through SQLite's backup API from a read-only
 // connection — never a file copy of a WAL-mode database mid-write.
-async function copyDb(dest: string): Promise<void> {
+export async function copyDb(dest: string): Promise<void> {
   const src = new Database(STATE_PATH, { readonly: true, fileMustExist: true });
   try {
     await src.backup(dest);

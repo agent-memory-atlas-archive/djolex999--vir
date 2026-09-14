@@ -43,7 +43,9 @@
     "test": "vitest run",
     "eval:build": "tsc -p eval/tsconfig.json",
     "eval": "npm run eval:build --silent && node eval/dist/eval/main.js",
-    "eval:spotcheck": "npm run eval --silent -- spotcheck"
+    "eval:spotcheck": "npm run eval --silent -- spotcheck",
+    "distill:ab": "npm run eval:build --silent && node eval/dist/eval/distill/main.js",
+    "distill:grade": "npm run eval:build --silent && node eval/dist/eval/distill/main.js grade"
   },
   "engines": {
     "node": ">=20"
