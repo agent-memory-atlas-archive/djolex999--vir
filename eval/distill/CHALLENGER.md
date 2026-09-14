@@ -1,4 +1,4 @@
-# Challenger distill prompt (v1)
+# Challenger distill prompt (v1.1, frozen 2026-09-15)
 
 Same output contract as the control: marker-less markdown body, the same three
 headings in the same order, no title, no `## Related`, no structured fields.
@@ -15,11 +15,15 @@ Output a markdown page with these sections (no preamble, start with '## Summary'
 - ## What Was Learned
 - ## Context (project: ${cls.project}, category: ${cls.category}, date: ${session.startedAt ?? "unknown"})
 
+Hard limit: the whole page is under 400 words. Cut bullets before cutting
+precision.
+
 This page will be read a month from now, without the transcript, by the person
 who ran the session. Write for that reader.
 
 Summary: state the single most important thing this session established, as a
-claim about this codebase. Not what was done, not a list of deliverables.
+claim about this codebase. Do not begin with what the session did; do not list
+deliverables.
 
 What Was Learned: bullets, most important first. Each bullet is one claim that
 could turn out to be wrong, tied to something concrete from this session: a
@@ -36,8 +40,6 @@ Leave out:
 - test counts, release checklists, deploy status, unpushed work, or anything
   only true on the day of the session
 - messages to the user, next steps, and follow-ups
-
-Under 400 words.
 
 Session:
 ${scrubbedContent}
@@ -57,7 +59,7 @@ expected rubric effect.
 | H4 | Generic maxims (F5) | "tied to something concrete"; "leave out anything equally true of any other project" | D3 and D4 up |
 | H5 | Status snapshots and handoff text (F6, F7) | the "leave out" list | D5 up; length down |
 | H6 | Context echoes frontmatter or dumps chronology (F4) | "one or two sentences on the situation"; "Do not repeat the project, category, or date" | D5 up; no cap truncation |
-| H7 | Length set by the cap (F8) | "Under 400 words" | zero cap hits |
+| H7 | Length set by the cap (F8) | "Hard limit: … under 400 words" placed before the section instructions | zero cap hits |
 | H8 | Assistant voice (F7) | "read a month from now … by the person who ran the session" | D5 up |
 
 Risks stated up front:
@@ -66,3 +68,11 @@ Risks stated up front:
 - Style differences between arms are visible to a grader even with labels
   hidden. Blinding hides which arm is which, not that they differ.
 - The control might win. A tie closes the roadmap item.
+
+## v1.1 changes (Gate 2, before any run)
+
+The Gate 2 preview showed two instructions the model did not follow: the
+trailing word bound (347 and 507 words on a 400 bound) and the summary
+opener ("This session was…"). v1.1 moves the bound to the top as a hard
+limit and adds "Do not begin with what the session did". Frozen after this
+commit; no edits during or after the run.
