@@ -1,10 +1,11 @@
-// Child process. HOME is one of the distill homes, so config.json, vir.db,
-// cost.log and the vault all resolve inside it. Every path it reads or
-// writes outside its home arrives on argv from the parent.
+// Child process under the real HOME (claude -p needs the Keychain login).
+// The arm home arrives as --home: config.json, vir.db and the vault are read
+// and written there explicitly; only cost.log lands in the real ~/.vir, with
+// provider "claude-cli", which the live config never uses.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
-import { loadConfig } from "../../src/config.js";
+import { ConfigSchema, expandHome, type Config } from "../../src/config.js";
+import { COST_LOG_PATH } from "../../src/cost/log.js";
 import {
   Distiller,
   normalizeModelName,
@@ -59,6 +60,21 @@ export interface ArmOutput {
   results: ArmResult[];
 }
 
+// The arm's config, parsed by the production schema, with its vault pinned
+// inside the arm home (a config pointing anywhere else is refused).
+export function loadArmConfig(home: string): Config {
+  const raw = JSON.parse(readFileSync(join(home, ".vir", "config.json"), "utf8")) as unknown;
+  const parsed = ConfigSchema.parse(raw);
+  const cfg: Config = {
+    ...parsed,
+    vaultPath: expandHome(parsed.vaultPath),
+    claudeProjectsDir: expandHome(parsed.claudeProjectsDir),
+  };
+  const vault = resolve(cfg.vaultPath);
+  if (!vault.startsWith(resolve(home) + sep)) throw new Error(`refusing: arm vault ${vault} is outside ${home}`);
+  return cfg;
+}
+
 export function assertInsideHomes(home: string, homesDir: string): void {
   const h = resolve(home);
   const d = resolve(homesDir);
@@ -97,8 +113,8 @@ function prepared(path: string, cfgFilter: "aggressive" | "moderate" | "off") {
   return { parsed, scrubbedSummary, scrubbedContent };
 }
 
-async function classifyStage(): Promise<void> {
-  const cfg = loadConfig();
+async function classifyStage(home: string): Promise<void> {
+  const cfg = loadArmConfig(home);
   const sample = JSON.parse(readFileSync(opt("sample"), "utf8")) as { sample: SampleEntry[] };
   const distiller = new Distiller(cfg);
   const out: ClassifiedEntry[] = [];
@@ -114,16 +130,15 @@ async function classifyStage(): Promise<void> {
   writeFileSync(opt("out"), JSON.stringify(out, null, 2));
 }
 
-async function distillStage(): Promise<void> {
+async function distillStage(home: string): Promise<void> {
   const arm = opt("arm") as Arm;
-  const cfg = loadConfig();
-  const home = homedir();
+  const cfg = loadArmConfig(home);
   const template = arm === "control" ? CONTROL_TEMPLATE : extractPromptTemplate(readFileSync(opt("challenger"), "utf8"));
   const distiller = new Distiller(cfg, { distillPrompt: makeBuilder(template) });
   const classified = JSON.parse(readFileSync(opt("classifications"), "utf8")) as ClassifiedEntry[];
-  const db = new StateDb();
+  const db = new StateDb(join(home, ".vir", "vir.db"));
   const writer = new VaultWriter(cfg, db);
-  const costLogPath = join(home, ".vir", "cost.log");
+  const costLogPath = COST_LOG_PATH;
   const outPath = opt("out");
   const results: ArmResult[] = existsSync(outPath)
     ? (JSON.parse(readFileSync(outPath, "utf8")) as ArmOutput).results
@@ -174,10 +189,11 @@ async function distillStage(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  assertInsideHomes(homedir(), opt("homes"));
+  const home = opt("home");
+  assertInsideHomes(home, opt("homes"));
   const stage = opt("stage");
-  if (stage === "classify") await classifyStage();
-  else if (stage === "distill") await distillStage();
+  if (stage === "classify") await classifyStage(home);
+  else if (stage === "distill") await distillStage(home);
   else throw new Error(`unknown stage ${stage}`);
 }
 

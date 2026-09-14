@@ -109,11 +109,15 @@ Track C "note quality unmeasured". Same rules as above: code here, data in
   `Distiller` constructor accepts `distillPrompt`; production passes nothing.
   `prompts.test.ts` proves the harness's control template renders
   byte-identical to production.
-- **Isolation.** Three child homes under `~/.vir/eval/distill/homes/`
-  (`shared`, `control`, `challenger`), each with a config copy (key kept,
-  embeddings off, notifications off) and a backup-API copy of `vir.db`.
-  Workers run with `HOME` set to their home, so config, DB, vault and
-  cost.log all resolve inside it; a worker refuses any other `HOME`.
+- **Isolation.** Three arm homes under `~/.vir/eval/distill/homes/`
+  (`shared`, `control`, `challenger`), each with a config copy (provider
+  `claude-cli`, secrets stripped, embeddings off, notifications off) and a
+  backup-API copy of `vir.db`. Workers run under the REAL `HOME` because
+  `claude -p` keeps its login in the macOS Keychain and cannot find it under
+  another home (`CLAUDE_CONFIG_DIR` does not carry it either); the arm home
+  is an explicit `--home` argument and the worker refuses a vault outside
+  it. Only cost.log lands in the real `~/.vir`, with provider `claude-cli`,
+  which the live config never uses.
 - **Routing pinned.** Classify runs once in `shared`; both arms read the same
   classification and the same `selectDistillModel` result per transcript.
 - **Blind.** `grading-set` writes body-only notes under opaque 8-hex ids in a

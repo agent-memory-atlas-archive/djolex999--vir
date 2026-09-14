@@ -22,8 +22,8 @@ function sha256(s: string): string {
 
 function runWorker(homeId: HomeId, args: string[]): void {
   const home = distillHome(homeId);
-  const res = spawnSync(process.execPath, [WORKER_JS, "--homes", DISTILL_HOMES_DIR, ...args], {
-    env: { ...process.env, HOME: home },
+  // Real HOME on purpose: claude -p reads its login from the Keychain there.
+  const res = spawnSync(process.execPath, [WORKER_JS, "--homes", DISTILL_HOMES_DIR, "--home", home, ...args], {
     stdio: "inherit",
   });
   if (res.status !== 0) throw new Error(`worker ${homeId} ${args[1] ?? ""} exited ${res.status}`);

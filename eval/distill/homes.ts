@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CONFIG_PATH, expandHome } from "../../src/config.js";
 import { copyDb } from "../prepareHomes.js";
@@ -13,12 +13,17 @@ export function distillHome(id: HomeId): string {
 
 const PATH_KEYS = ["claudeProjectsDir", "articlesDir", "pdfsDir"] as const;
 
-// Unlike the retrieval arms, these children DO call the LLM, so the API key
-// stays in the copy (0600, inside ~/.vir/eval which is 0700). The vault is
-// the home's own; embeddings are off so Ollama cannot add variance; no
-// notifications, no query log.
+const SECRET_KEYS = ["anthropicApiKey", "kieApiKey"] as const;
+
+// Both arms run on the subscription (`claude-cli`), so no secret is copied.
+// The vault is the home's own; embeddings are off so Ollama cannot add
+// variance; no notifications, no query log. Workers run under the REAL HOME
+// (claude -p keeps its login in the macOS Keychain and will not find it under
+// another home) and take this home as an explicit argument.
 export function buildDistillHomeConfig(raw: Record<string, unknown>, home: string): Record<string, unknown> {
   const cfg: Record<string, unknown> = { ...raw };
+  for (const k of SECRET_KEYS) delete cfg[k];
+  cfg["provider"] = "claude-cli";
   for (const k of PATH_KEYS) {
     const v = cfg[k];
     if (typeof v === "string") cfg[k] = expandHome(v);
@@ -37,6 +42,7 @@ export async function prepareDistillHomes(opts: { refresh?: boolean } = {}): Pro
   for (const id of HOME_IDS) {
     const home = distillHome(id);
     const virDir = join(home, ".vir");
+    if (opts.refresh) rmSync(home, { recursive: true, force: true });
     mkdirSync(virDir, { recursive: true });
     mkdirSync(join(home, "vault"), { recursive: true });
     const cfgPath = join(virDir, "config.json");
