@@ -97,3 +97,36 @@ agreeing with themselves are correlation, not verification.
 `tfidf`, `nomic`, `nomic-mmr`, `bge`, `bge-mmr`. TF-IDF has no MMR arm because
 production applies MMR in the embedding path only. New arms (hybrid, re-rank)
 are `ArmSpec` entries once the retriever exposes them as config.
+
+## Distill prompt A/B (`eval/distill/`)
+
+Blind, paired comparison of the production distill prompt (control) against
+one challenger, on the transcripts that still exist on disk. Roadmap v7
+Track C "note quality unmeasured". Same rules as above: code here, data in
+`~/.vir/eval/distill/`, never a `vir` command, never shipped.
+
+- **Seam.** `src/pipeline/distiller.ts` exports `buildDistillPrompt` and the
+  `Distiller` constructor accepts `distillPrompt`; production passes nothing.
+  `prompts.test.ts` proves the harness's control template renders
+  byte-identical to production.
+- **Isolation.** Three child homes under `~/.vir/eval/distill/homes/`
+  (`shared`, `control`, `challenger`), each with a config copy (key kept,
+  embeddings off, notifications off) and a backup-API copy of `vir.db`.
+  Workers run with `HOME` set to their home, so config, DB, vault and
+  cost.log all resolve inside it; a worker refuses any other `HOME`.
+- **Routing pinned.** Classify runs once in `shared`; both arms read the same
+  classification and the same `selectDistillModel` result per transcript.
+- **Blind.** `grading-set` writes body-only notes under opaque 8-hex ids in a
+  seeded shuffle; `mapping.json` (0600) is not read until `report`. The
+  grader shows no arm, no pair, no totals. `judge` scores the same rubric via
+  `claude -p` and seals the result; it is a preview, never the result.
+- **Rubric** `eval/distill/RUBRIC.md`, SHA-256 in every grade file.
+  **Challenger** `eval/distill/CHALLENGER.md`, frozen at v1.1.
+
+```
+npm run distill:ab -- run [--dry-run] [--reclassify]
+npm run distill:ab -- grading-set [--seed N]
+npm run distill:ab -- judge
+npm run distill:grade
+npm run distill:ab -- report
+```
