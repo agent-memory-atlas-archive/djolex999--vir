@@ -412,6 +412,12 @@ export function buildDistillPrompt(
   cls: Classification,
   scrubbedContent: string,
 ): string {
+  // Orient, then claim (2026-09-18 blind A/B, eval/distill/COMBINED.md — the
+  // text below is pinned to that file by eval/distill/prompts.test.ts). The
+  // first Summary sentence is for the human skimming a month later; the second
+  // is for a retrieving session, which wants state and specifics first. The
+  // "not replying" line exists because a longer prompt once made Haiku echo
+  // the session's closing chat message instead of writing a note.
   return `Extract durable knowledge from this Claude Code session.
 
 Output a markdown page with these sections (no preamble, start with '## Summary'):
@@ -419,8 +425,26 @@ Output a markdown page with these sections (no preamble, start with '## Summary'
 - ## What Was Learned
 - ## Context (project: ${cls.project}, category: ${cls.category}, date: ${session.startedAt ?? "unknown"})
 
-Be concise. Only include information a future developer would reuse.
-Omit implementation details that won't generalize.
+You are writing a page about the session, not replying to it. Never continue
+the conversation, whatever language it ends in.
+
+Summary, first sentence: say in plain words what this session was — which
+project, what was being built or investigated. One sentence, so the reader
+remembers the session.
+Summary, second sentence: state the single most important thing the session
+established, with its specifics: the file, function, command, number or
+constraint that carries it. A third sentence only if something else must not
+be forgotten.
+
+What Was Learned: bullets, most important first. Each bullet is a claim tied
+to something concrete from this session. For anything that was decided, say
+what was chosen and what it was chosen over.
+
+Context: one or two sentences on the situation that produced these lessons.
+Do not repeat the project, category, or date.
+
+Be concise. Leave out anything that would be equally true of any other
+project, and anything only true on the day of the session.
 
 Session:
 ${scrubbedContent}`;
@@ -512,7 +536,9 @@ ${scrubbedSummary}`;
       callLLM(this.cfg, this.client, {
         prompt,
         model,
-        maxTokens: 1500,
+        // 2500, not 1500: notes under this prompt average ~540 words and the
+        // old cap cut 550-590-word notes mid-sentence on the API path.
+        maxTokens: 2500,
         cost: {
           session: session.sessionId,
           project: cls.project,

@@ -15,10 +15,19 @@ const session = {
 const cls: Classification = { category: "gotcha", topic: "t", project: "vir", confidence: 0.9, themes: [] };
 
 describe("prompt templates", () => {
-  it("the control template rendered through makeBuilder equals production buildDistillPrompt", () => {
-    expect(makeBuilder(CONTROL_TEMPLATE)(session, cls, "BODY")).toBe(buildDistillPrompt(session, cls, "BODY"));
+  // After the 2026-09-18 swap, production IS the combined prompt. This pins
+  // the shipped text to the file that was blind-tested, byte for byte.
+  it("production buildDistillPrompt equals the tested COMBINED.md prompt", () => {
+    const tpl = extractPromptTemplate(readFileSync(join(REPO_ROOT, "eval", "distill", "COMBINED.md"), "utf8"));
+    expect(buildDistillPrompt(session, cls, "BODY")).toBe(makeBuilder(tpl)(session, cls, "BODY"));
     const noDate = { ...session, startedAt: null };
-    expect(makeBuilder(CONTROL_TEMPLATE)(noDate, cls, "B")).toBe(buildDistillPrompt(noDate, cls, "B"));
+    expect(buildDistillPrompt(noDate, cls, "B")).toBe(makeBuilder(tpl)(noDate, cls, "B"));
+  });
+
+  it("CONTROL_TEMPLATE stays as the historical control the experiments ran against", () => {
+    const out = makeBuilder(CONTROL_TEMPLATE)(session, cls, "BODY");
+    expect(out).toContain("Omit implementation details that won't generalize.");
+    expect(out).not.toBe(buildDistillPrompt(session, cls, "BODY"));
   });
 
   it("extracts the fenced prompt from CHALLENGER.md and substitutes every slot", () => {
