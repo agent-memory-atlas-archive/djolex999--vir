@@ -33,7 +33,7 @@ This session implemented `vir doctor`, a new diagnostic command that runs 10 seq
 ## Related
 
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
-- test-driven-development-seams
+- ollama-probe-null-breaks-inference
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
-- [period-window summaries without retrieval pollution](/vault/decisions/period-window-summaries-without-retrieval-pollutio-3745b31b/)

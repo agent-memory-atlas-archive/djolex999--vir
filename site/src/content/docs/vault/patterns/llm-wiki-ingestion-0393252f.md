@@ -33,7 +33,7 @@ This session implemented web article ingestion for the `vir` CLI tool (a Claude 
 ## Related
 
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)
 - [mirrored-sweep-for-new-entity-type](/vault/patterns/mirrored-sweep-for-new-entity-type-7415aa64/)
-- [period-window summaries without retrieval pollution](/vault/decisions/period-window-summaries-without-retrieval-pollutio-3745b31b/)
-- session-storage-hook-management
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
+- [time-window selection resolves schema tension](/vault/decisions/time-window-selection-resolves-schema-tension-3745b31b/)

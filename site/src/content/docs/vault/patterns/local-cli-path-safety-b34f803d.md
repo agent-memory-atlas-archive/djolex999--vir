@@ -46,5 +46,5 @@ Files reviewed: `periodSummary.ts` (orchestration), `retriever.ts` (search), `su
 - [sanitization-alone-insufficient-for-path-safety](/vault/gotchas/sanitization-alone-insufficient-for-path-safety-3a425d11/)
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
 - [embedding-pipeline-backfill-parity](/vault/patterns/embedding-pipeline-backfill-parity-9afb0664/)
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
 - [timeout-abort-safety](/vault/patterns/timeout-abort-safety-cb814268/)
+- [error-handling-refactor](/vault/decisions/error-handling-refactor-daa71c94/)

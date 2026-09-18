@@ -36,8 +36,8 @@ This session on the `vir` project (a Claude Code session distiller) uncovered th
 
 ## Related
 
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
 - v1-architecture-and-sequencing
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
-- [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
+- [embedding-model-tradeoff-bundleable](/vault/decisions/embedding-model-tradeoff-bundleable-2608f39e/)
+- ollama-probe-null-breaks-inference

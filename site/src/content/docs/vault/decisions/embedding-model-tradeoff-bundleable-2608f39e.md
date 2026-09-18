@@ -28,7 +28,7 @@ Project: vir. Category: decision. Date: 2026-07-31T12:59:17.019Z.
 ## Related
 
 - [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
-- [query-logging-append-only-architecture](/vault/patterns/query-logging-append-only-architecture-a2bc5634/)
-- ollama-probe-null-breaks-inference
-- [mirrored-sweep-for-new-entity-type](/vault/patterns/mirrored-sweep-for-new-entity-type-7415aa64/)
-- [thesis-as-launch-launchpad](/vault/decisions/thesis-as-launch-launchpad-395d2f80/)
+- [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
+- [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
+- [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)

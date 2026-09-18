@@ -34,4 +34,4 @@ Three sessions (A: 0.9.0, B: 0.9.1, C: 0.9.2), each TDD RED→GREEN, each throug
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
 - [active-learning-review-loop](/vault/patterns/active-learning-review-loop-f41385ca/)
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
-- [mmr-reranking-integration](/vault/patterns/mmr-reranking-integration-573d0e9f/)
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)

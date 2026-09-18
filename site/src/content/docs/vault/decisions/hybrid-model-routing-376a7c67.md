@@ -40,8 +40,8 @@ A hybrid model-routing feature was added to the `vir` project's distillation pip
 
 ## Related
 
-- force-model override injection
 - [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
+- [embedding-model-tradeoff-bundleable](/vault/decisions/embedding-model-tradeoff-bundleable-2608f39e/)

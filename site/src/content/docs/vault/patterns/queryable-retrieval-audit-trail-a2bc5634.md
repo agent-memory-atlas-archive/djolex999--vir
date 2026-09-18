@@ -56,7 +56,7 @@ Built a complete retrieval-logging system (vir 0.16.0) and added an optional sub
 ## Related
 
 - [silent-failure class unfinished](/vault/gotchas/silent-failure-class-unfinished-7bfa9706/)
-- [thesis-as-launch-launchpad](/vault/decisions/thesis-as-launch-launchpad-395d2f80/)
-- ollama-probe-null-breaks-inference
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
-- [active-learning-review-loop](/vault/patterns/active-learning-review-loop-f41385ca/)
+- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
+- dry-run-bypass-in-conditional-branches
+- [stale-bug-hunt-docs-mask-fixes](/vault/gotchas/stale-bug-hunt-docs-mask-fixes-4e2d8934/)

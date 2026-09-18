@@ -34,8 +34,8 @@ Implemented MMR (Maximum Marginal Relevance) reranking for semantic search in th
 
 ## Related
 
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
-- parallel-data-fetching
-- [active-learning-review-loop](/vault/patterns/active-learning-review-loop-f41385ca/)

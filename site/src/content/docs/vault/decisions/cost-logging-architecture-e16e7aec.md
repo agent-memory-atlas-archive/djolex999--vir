@@ -38,8 +38,8 @@ This session shipped vir 0.7.0, adding cost visibility (`src/cost/` module, `cal
 
 ## Related
 
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
-- force-model override injection
-- [period-window summaries without retrieval pollution](/vault/decisions/period-window-summaries-without-retrieval-pollutio-3745b31b/)
+- [embedding-model-tradeoff-bundleable](/vault/decisions/embedding-model-tradeoff-bundleable-2608f39e/)
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)

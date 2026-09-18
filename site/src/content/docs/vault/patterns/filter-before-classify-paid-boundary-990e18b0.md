@@ -40,8 +40,8 @@ This session built a feature-complete project and transcript filtering system fo
 
 ## Related
 
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
+- cost-recording-retry-safety
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
-- [skill-result-stripping](/vault/patterns/skill-result-stripping-agent-a0/)
+- skill-result-stripping
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
 - article-embeddings-excluded-from-sweep

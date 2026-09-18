@@ -65,6 +65,6 @@ This session made a series of incremental improvements to the `vir` CLI tool —
 
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
 - security-audit-patch
 - [cross-platform-daemon-abstraction](/vault/patterns/cross-platform-daemon-abstraction-6b95ade7/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)
