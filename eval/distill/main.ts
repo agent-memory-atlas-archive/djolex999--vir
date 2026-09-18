@@ -5,7 +5,9 @@ import { runGrader } from "./grade.js";
 import { prepareDistillHomes } from "./homes.js";
 import { runJudge } from "./judgeRun.js";
 import { writeCalibratedReport, writeReport } from "./reportRun.js";
-import { latestRunDir, runDistillAb } from "./run.js";
+import { latestRunDir, runDistillAb, runNewArm } from "./run.js";
+import { join } from "node:path";
+import { REPO_ROOT } from "../repo.js";
 import { quickReport, runQuick } from "./quickRun.js";
 import { runPairwise } from "./pairwiseRun.js";
 
@@ -58,13 +60,16 @@ async function main(): Promise<void> {
       process.stdout.write(writeReport());
       return;
     case "quick":
-      await runQuick(opt("run") ?? latestRunDir(), seed);
+      await runQuick(opt("run") ?? latestRunDir(), seed, opt("tag") ?? "");
+      return;
+    case "run-combined":
+      await runNewArm({ mdPath: join(REPO_ROOT, "eval", "distill", "COMBINED.md"), fromRun: opt("from") ?? latestRunDir(), home: "combined", tag: "v2" });
       return;
     case "pairwise":
-      await runPairwise(opt("run") ?? latestRunDir(), opt("model") ?? "claude-fable-5-1", opt("scope") === "full" ? "full" : "top");
+      await runPairwise(opt("run") ?? latestRunDir(), opt("model") ?? "claude-fable-5-1", opt("scope") === "full" ? "full" : "top", opt("tag") ?? "");
       return;
     case "quick-report":
-      process.stdout.write(quickReport());
+      process.stdout.write(quickReport(opt("tag") ?? ""));
       return;
     case "report-calibrated":
       process.stdout.write(writeCalibratedReport((opt("models") ?? "claude-fable-5-1,claude-sonnet-5").split(",")));

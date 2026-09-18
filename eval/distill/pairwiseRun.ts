@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { callJudge, mapLimit } from "../llm.js";
 import { stripFrontmatterAndHeader } from "./gradingSetIo.js";
-import { DISTILL_DIR } from "./paths.js";
+import { pairwisePath } from "./paths.js";
 import { buildPairwisePrompt, parsePairwise, reconcileOrders, type PairwiseAnswer, type Verdict } from "./pairwise.js";
 import { noteTop } from "./quick.js";
 import type { ArmOutput } from "./worker.js";
@@ -16,8 +16,8 @@ export interface PairwiseRecord {
   diary: Verdict;
 }
 
-export async function runPairwise(runDir: string, model: string, scope: "top" | "full"): Promise<void> {
-  const out = join(DISTILL_DIR, `pairwise-${model}-${scope}.json`);
+export async function runPairwise(runDir: string, model: string, scope: "top" | "full", tag = ""): Promise<void> {
+  const out = pairwisePath(model, scope, tag);
   const have: PairwiseRecord[] = existsSync(out) ? (JSON.parse(readFileSync(out, "utf8")) as { records: PairwiseRecord[] }).records : [];
   const control = JSON.parse(readFileSync(join(runDir, "control.json"), "utf8")) as ArmOutput;
   const challenger = JSON.parse(readFileSync(join(runDir, "challenger.json"), "utf8")) as ArmOutput;

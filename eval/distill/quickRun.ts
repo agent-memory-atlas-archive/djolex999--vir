@@ -4,13 +4,14 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { makeRng } from "../rng.js";
 import { stripFrontmatterAndHeader } from "./gradingSetIo.js";
-import { DISTILL_QUICK_ANSWERS_PATH, DISTILL_QUICK_SET_PATH, DISTILL_QUICK_SIDES_PATH } from "./paths.js";
+import { quickPaths } from "./paths.js";
 import { buildQuickSet, parseChoice, quickSummary, type Choice, type QuickAnswer, type QuickItem, type QuickSide } from "./quick.js";
 import type { ArmOutput } from "./worker.js";
 
 const MAX_WORDS = 80;
 
-function ensureSet(runDir: string, seed: number): QuickItem[] {
+function ensureSet(runDir: string, seed: number, tag: string): QuickItem[] {
+  const { set: DISTILL_QUICK_SET_PATH, sides: DISTILL_QUICK_SIDES_PATH } = quickPaths(tag);
   if (existsSync(DISTILL_QUICK_SET_PATH)) return (JSON.parse(readFileSync(DISTILL_QUICK_SET_PATH, "utf8")) as { items: QuickItem[] }).items;
   const control = JSON.parse(readFileSync(join(runDir, "control.json"), "utf8")) as ArmOutput;
   const challenger = JSON.parse(readFileSync(join(runDir, "challenger.json"), "utf8")) as ArmOutput;
@@ -27,13 +28,15 @@ function ensureSet(runDir: string, seed: number): QuickItem[] {
   return set.items;
 }
 
-function readAnswers(): QuickAnswer[] {
+function readAnswers(tag: string): QuickAnswer[] {
+  const DISTILL_QUICK_ANSWERS_PATH = quickPaths(tag).answers;
   return existsSync(DISTILL_QUICK_ANSWERS_PATH) ? (JSON.parse(readFileSync(DISTILL_QUICK_ANSWERS_PATH, "utf8")) as { answers: QuickAnswer[] }).answers : [];
 }
 
-export async function runQuick(runDir: string, seed: number): Promise<void> {
-  const items = ensureSet(runDir, seed);
-  let answers = readAnswers();
+export async function runQuick(runDir: string, seed: number, tag = ""): Promise<void> {
+  const DISTILL_QUICK_ANSWERS_PATH = quickPaths(tag).answers;
+  const items = ensureSet(runDir, seed, tag);
+  let answers = readAnswers(tag);
   const done = new Set(answers.map((a) => a.pairIdx));
   const todo = items.filter((i) => !done.has(i.pairIdx));
   const log = (l: string): void => void stdout.write(`${l}\n`);
@@ -68,15 +71,16 @@ export async function runQuick(runDir: string, seed: number): Promise<void> {
       writeFileSync(DISTILL_QUICK_ANSWERS_PATH, JSON.stringify({ version: 1, answers }, null, 2));
     }
     log("");
-    log("done — tell Claude, or run: npm run distill:ab -- quick-report");
+    log("done — tell Claude.");
   } finally {
     rl.close();
   }
 }
 
-export function quickReport(): string {
+export function quickReport(tag = ""): string {
+  const DISTILL_QUICK_SIDES_PATH = quickPaths(tag).sides;
   const sides = (JSON.parse(readFileSync(DISTILL_QUICK_SIDES_PATH, "utf8")) as { sides: QuickSide[] }).sides;
-  const answers = readAnswers();
+  const answers = readAnswers(tag);
   const s = quickSummary(sides, answers);
   const row = (name: string, t: { challenger: number; control: number; ties: number; p: number }): string =>
     `| ${name} | ${t.challenger} | ${t.control} | ${t.ties} | ${t.p.toFixed(3)} |`;

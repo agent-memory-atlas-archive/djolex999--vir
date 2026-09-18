@@ -15,3 +15,17 @@ export const DISTILL_CLASSIFICATIONS_PATH = join(DISTILL_DIR, "classifications.j
 export const DISTILL_QUICK_SET_PATH = join(DISTILL_DIR, "quick", "set.json");
 export const DISTILL_QUICK_SIDES_PATH = join(DISTILL_DIR, "quick", "sides.json");
 export const DISTILL_QUICK_ANSWERS_PATH = join(DISTILL_DIR, "quick", "answers.json");
+
+// A second test (e.g. tag "v2") keeps its blind set, sealed sides, answers
+// and model verdicts apart from the first. Empty tag = the original files.
+function checkTag(tag: string): string {
+  if (!/^[a-z0-9-]*$/.test(tag)) throw new Error(`invalid tag: ${tag}`);
+  return tag;
+}
+export function quickPaths(tag: string): { set: string; sides: string; answers: string } {
+  const dir = join(DISTILL_DIR, checkTag(tag) ? `quick-${tag}` : "quick");
+  return { set: join(dir, "set.json"), sides: join(dir, "sides.json"), answers: join(dir, "answers.json") };
+}
+export function pairwisePath(model: string, scope: "top" | "full", tag: string): string {
+  return join(DISTILL_DIR, `pairwise-${model}-${scope}${checkTag(tag) ? `-${tag}` : ""}.json`);
+}

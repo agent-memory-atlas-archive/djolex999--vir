@@ -1,5 +1,5 @@
 import { spawnSync, execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { REPO_ROOT } from "../repo.js";
@@ -117,4 +117,28 @@ export function latestRunDir(): string {
   const last = dirs[dirs.length - 1];
   if (!last) throw new Error("no runs yet");
   return join(DISTILL_RUNS_DIR, last);
+}
+
+// Second experiment: one new arm against the control notes already paid for.
+// The control is not re-distilled (it does not depend on the challenger); the
+// new arm runs in its own home with the same shared classification, so
+// routing is still identical per transcript.
+export async function runNewArm(opts: { mdPath: string; fromRun: string; home: HomeId; tag: string }): Promise<string> {
+  await prepareDistillHomes();
+  const runDir = join(DISTILL_RUNS_DIR, `${new Date().toISOString().replace(/[:.]/g, "-")}-${opts.tag}`);
+  mkdirSync(runDir, { recursive: true });
+  copyFileSync(join(opts.fromRun, "control.json"), join(runDir, "control.json"));
+  const md = readFileSync(opts.mdPath, "utf8");
+  const base = JSON.parse(readFileSync(join(opts.fromRun, "manifest.json"), "utf8")) as Record<string, unknown>;
+  writeFileSync(join(runDir, "manifest.json"), JSON.stringify({
+    ...base,
+    createdAt: new Date().toISOString(),
+    git: gitInfo(),
+    tag: opts.tag,
+    controlReusedFrom: opts.fromRun,
+    prompts: { control: promptHash(CONTROL_TEMPLATE), challenger: promptHash(extractPromptTemplate(md)), challengerFile: opts.mdPath, challengerFileSha256: sha256(md) },
+  }, null, 2));
+  runWorker(opts.home, ["--stage", "distill", "--arm", "challenger", "--classifications", DISTILL_CLASSIFICATIONS_PATH, "--challenger", opts.mdPath, "--out", join(runDir, "challenger.json")]);
+  process.stdout.write(`run written → ${runDir}\n`);
+  return runDir;
 }

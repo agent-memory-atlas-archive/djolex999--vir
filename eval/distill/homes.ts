@@ -4,7 +4,7 @@ import { CONFIG_PATH, expandHome } from "../../src/config.js";
 import { copyDb } from "../prepareHomes.js";
 import { DISTILL_HOMES_DIR } from "./paths.js";
 
-export const HOME_IDS = ["shared", "control", "challenger"] as const;
+export const HOME_IDS = ["shared", "control", "challenger", "combined"] as const;
 export type HomeId = (typeof HOME_IDS)[number];
 
 export function distillHome(id: HomeId): string {
