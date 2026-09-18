@@ -6,6 +6,7 @@ import { prepareDistillHomes } from "./homes.js";
 import { runJudge } from "./judgeRun.js";
 import { writeCalibratedReport, writeReport } from "./reportRun.js";
 import { latestRunDir, runDistillAb } from "./run.js";
+import { quickReport, runQuick } from "./quickRun.js";
 
 const DEFAULT_SEED = 20260915;
 
@@ -26,6 +27,8 @@ const USAGE = `usage: npm run distill:ab -- <command>
   report        unblind and write <run>/report.md (requires every note graded)
   report-calibrated   judges over all pairs + human subset agreement [--models a,b]
 
+  npm run distill:quick                 5-minute forced choice on note tops, 15 pairs
+  quick-report                          unblind the quick test
   npm run distill:grade                 grade all notes one at a time
   npm run distill:grade -- --pairs 5    grade a seeded subset of 5 whole pairs (10 notes)`;
 
@@ -52,6 +55,12 @@ async function main(): Promise<void> {
       return;
     case "report":
       process.stdout.write(writeReport());
+      return;
+    case "quick":
+      await runQuick(opt("run") ?? latestRunDir(), seed);
+      return;
+    case "quick-report":
+      process.stdout.write(quickReport());
       return;
     case "report-calibrated":
       process.stdout.write(writeCalibratedReport((opt("models") ?? "claude-fable-5-1,claude-sonnet-5").split(",")));

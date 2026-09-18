@@ -12,3 +12,6 @@ export const DISTILL_MAPPING_PATH = join(DISTILL_GRADING_DIR, "mapping.json");
 export const DISTILL_GRADES_PATH = join(EVAL_DIR, "distill-grades.json");
 export const DISTILL_JUDGE_PATH = join(DISTILL_DIR, "judge.json");
 export const DISTILL_CLASSIFICATIONS_PATH = join(DISTILL_DIR, "classifications.json");
+export const DISTILL_QUICK_SET_PATH = join(DISTILL_DIR, "quick", "set.json");
+export const DISTILL_QUICK_SIDES_PATH = join(DISTILL_DIR, "quick", "sides.json");
+export const DISTILL_QUICK_ANSWERS_PATH = join(DISTILL_DIR, "quick", "answers.json");
