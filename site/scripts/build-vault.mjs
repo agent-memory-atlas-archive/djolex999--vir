@@ -6,9 +6,11 @@
 //
 //   cd site && node scripts/build-vault.mjs
 //
-// Output is committed; Vercel has no vault.
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+// Output is committed; Vercel has no vault. The hand-written index.md is kept
+// and its note count is rewritten from the build.
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { clearGenerated, withNoteCount } from "./vault-lib.mjs";
 
 const home = process.env.HOME ?? "";
 const cfg = JSON.parse(readFileSync(join(home, ".vir/config.json"), "utf8"));
@@ -68,7 +70,8 @@ function rewrite(body) {
   );
 }
 
-rmSync(OUT, { recursive: true, force: true });
+// Only the generated category folders: index.md is hand-written and stays.
+clearGenerated(OUT, Object.keys(CATS));
 const counts = {};
 for (const n of notes) {
   const dir = join(OUT, n.dir);
@@ -93,6 +96,9 @@ ${rewrite(n.body)}
 `,
   );
 }
+
+const indexPath = join(OUT, "index.md");
+writeFileSync(indexPath, withNoteCount(readFileSync(indexPath, "utf8"), notes.length));
 
 console.log(
   `vault/: ${notes.length} notes — ${Object.entries(counts).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(", ")}`,
