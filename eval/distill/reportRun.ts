@@ -22,3 +22,25 @@ export function writeReport(): string {
   writeFileSync(out, md);
   return md;
 }
+
+import { buildCalibratedReport, type JudgeGrades } from "./calibratedReport.js";
+import { judgeFileName } from "./calibrate.js";
+import { DISTILL_DIR } from "./paths.js";
+
+// Partial human grades are fine here: the judges carry the full comparison,
+// the human subset calibrates them.
+export function writeCalibratedReport(models: readonly string[]): string {
+  const mapping = JSON.parse(readFileSync(DISTILL_MAPPING_PATH, "utf8")) as { runDir: string; mapping: MappingEntry[] };
+  const human = existsSync(DISTILL_GRADES_PATH) ? (JSON.parse(readFileSync(DISTILL_GRADES_PATH, "utf8")) as GradeStore).grades : [];
+  const judges: JudgeGrades[] = models.map((model) => {
+    const p = join(DISTILL_DIR, judgeFileName(model));
+    if (!existsSync(p)) throw new Error(`no sealed grades for ${model} at ${p}`);
+    return { model, grades: (JSON.parse(readFileSync(p, "utf8")) as { grades: GradeRecord[] }).grades };
+  });
+  const sample = JSON.parse(readFileSync(DISTILL_SAMPLE_PATH, "utf8")) as { sample: Array<{ idx: number; project: string; path: string }> };
+  const sampleLabels: Record<number, string> = {};
+  for (const s of sample.sample) sampleLabels[s.idx] = `${s.project} ${s.path.split("/").pop()!.slice(0, 8)}`;
+  const md = buildCalibratedReport({ mapping: mapping.mapping, human, judges, sampleLabels });
+  writeFileSync(join(mapping.runDir, "report-calibrated.md"), md);
+  return md;
+}

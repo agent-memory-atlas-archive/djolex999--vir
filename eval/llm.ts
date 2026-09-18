@@ -10,8 +10,9 @@ export async function callJudge(
   stage: "eval-label" | "eval-query-gen" | "eval-distill-judge",
   prompt: string,
   session: string,
+  model: string = EVAL_MODEL,
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
-  const res = await callClaudeCli({ prompt, model: EVAL_MODEL });
+  const res = await callClaudeCli({ prompt, model });
   // Input is always the chars/4 estimate: the claude -p envelope reports the
   // prompt-cache tokens in separate fields that parseCliEnvelope drops, so its
   // `input_tokens` is ~2 for a 3k-token prompt (todo.md, 2026-09-12). Output
@@ -23,7 +24,7 @@ export async function callJudge(
     session,
     project: "eval",
     stage,
-    model: EVAL_MODEL,
+    model,
     provider: "claude-cli",
     input_tokens: inputTokens,
     output_tokens: outputTokens,

@@ -5,7 +5,10 @@ import { stdin, stdout } from "node:process";
 import { createHash } from "node:crypto";
 import { REPO_ROOT } from "../repo.js";
 import { parseScores, upsertGrade, type GradeStore } from "./grades.js";
-import { DISTILL_GRADES_PATH, DISTILL_GRADING_DIR } from "./paths.js";
+import { makeRng } from "../rng.js";
+import { pickPairSubset } from "./calibrate.js";
+import type { MappingEntry } from "./gradingSet.js";
+import { DISTILL_GRADES_PATH, DISTILL_GRADING_DIR, DISTILL_MAPPING_PATH } from "./paths.js";
 
 const RUBRIC_PATH = join(REPO_ROOT, "eval", "distill", "RUBRIC.md");
 
@@ -18,25 +21,38 @@ function readStore(rubricSha256: string): GradeStore {
 
 // One note at a time, opaque id only, five scores, optional free text. No
 // arm, no totals, no pair. Resumable: graded ids are skipped.
-export async function runGrader(): Promise<void> {
+export async function runGrader(opts: { pairs?: number; seed?: number } = {}): Promise<void> {
   const rubric = readFileSync(RUBRIC_PATH, "utf8");
   const rubricSha256 = createHash("sha256").update(rubric, "utf8").digest("hex");
   const setPath = join(DISTILL_GRADING_DIR, "set.json");
   if (!existsSync(setPath)) throw new Error("no grading set — run the grading-set step first");
-  const set = JSON.parse(readFileSync(setPath, "utf8")) as { order: string[] };
+  const full = JSON.parse(readFileSync(setPath, "utf8")) as { order: string[] };
+  // --pairs k: a seeded subset of k whole pairs. The sealed mapping is read
+  // here in code only, to pick pairs; no arm or pairing is ever printed.
+  const set = opts.pairs
+    ? {
+        order: pickPairSubset(
+          (JSON.parse(readFileSync(DISTILL_MAPPING_PATH, "utf8")) as { mapping: MappingEntry[] }).mapping,
+          full.order,
+          opts.pairs,
+          makeRng(opts.seed ?? 20260915),
+        ),
+      }
+    : full;
   let store = readStore(rubricSha256);
   const done = new Set(store.grades.map((g) => g.id));
   const todo = set.order.filter((id) => !done.has(id));
+  const doneHere = set.order.length - todo.length;
   const log = (l: string) => stdout.write(`${l}\n`);
   log(rubric.trim());
   log("");
-  log(`${set.order.length} notes, ${done.size} graded, ${todo.length} to go. Enter five scores as "2 1 0 2 1" (D1 D2 D3 D4 D5). "q" stops; progress is saved after every note.`);
+  log(`${set.order.length} notes, ${doneHere} graded, ${todo.length} to go. Enter five scores as "2 1 0 2 1" (D1 D2 D3 D4 D5). "q" stops; progress is saved after every note.`);
   const rl = createInterface({ input: stdin, output: stdout });
   try {
     for (const id of todo) {
       const body = readFileSync(join(DISTILL_GRADING_DIR, `${id}.md`), "utf8");
       log("");
-      log(`================ note ${done.size + 1} of ${set.order.length} ================`);
+      log(`================ note ${set.order.length - todo.length + todo.indexOf(id) + 1} of ${set.order.length} ================`);
       log("");
       log(body.trim());
       log("");

@@ -4,7 +4,7 @@ import { buildAndWriteGradingSet } from "./gradingSetIo.js";
 import { runGrader } from "./grade.js";
 import { prepareDistillHomes } from "./homes.js";
 import { runJudge } from "./judgeRun.js";
-import { writeReport } from "./reportRun.js";
+import { writeCalibratedReport, writeReport } from "./reportRun.js";
 import { latestRunDir, runDistillAb } from "./run.js";
 
 const DEFAULT_SEED = 20260915;
@@ -22,10 +22,12 @@ const USAGE = `usage: npm run distill:ab -- <command>
   homes         prepare shared/control/challenger homes under ~/.vir/eval/distill/homes [--refresh]
   run           classify once, then distill every sample transcript under both arms [--dry-run] [--reclassify] [--resume <dir>]
   grading-set   shuffle the latest run into opaque-id notes + sealed mapping [--seed N] [--refresh]
-  judge         model preview of the rubric (sealed, not shown)
+  judge         model preview of the rubric (sealed, not shown) [--model <id>]
   report        unblind and write <run>/report.md (requires every note graded)
+  report-calibrated   judges over all pairs + human subset agreement [--models a,b]
 
-  npm run distill:grade   grade the notes one at a time`;
+  npm run distill:grade                 grade all notes one at a time
+  npm run distill:grade -- --pairs 5    grade a seeded subset of 5 whole pairs (10 notes)`;
 
 async function main(): Promise<void> {
   const cmd = process.argv[2];
@@ -40,14 +42,19 @@ async function main(): Promise<void> {
     case "grading-set":
       buildAndWriteGradingSet(opt("run") ?? latestRunDir(), seed, flag("refresh"));
       return;
-    case "grade":
-      await runGrader();
+    case "grade": {
+      const pairs = opt("pairs");
+      await runGrader({ pairs: pairs ? Number.parseInt(pairs, 10) : undefined, seed });
       return;
+    }
     case "judge":
-      await runJudge();
+      await runJudge(opt("model") ?? "claude-sonnet-5");
       return;
     case "report":
       process.stdout.write(writeReport());
+      return;
+    case "report-calibrated":
+      process.stdout.write(writeCalibratedReport((opt("models") ?? "claude-fable-5-1,claude-sonnet-5").split(",")));
       return;
     default:
       process.stderr.write(`${USAGE}\n`);
