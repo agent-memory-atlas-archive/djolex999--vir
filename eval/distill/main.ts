@@ -7,6 +7,7 @@ import { runJudge } from "./judgeRun.js";
 import { writeCalibratedReport, writeReport } from "./reportRun.js";
 import { latestRunDir, runDistillAb } from "./run.js";
 import { quickReport, runQuick } from "./quickRun.js";
+import { runPairwise } from "./pairwiseRun.js";
 
 const DEFAULT_SEED = 20260915;
 
@@ -58,6 +59,9 @@ async function main(): Promise<void> {
       return;
     case "quick":
       await runQuick(opt("run") ?? latestRunDir(), seed);
+      return;
+    case "pairwise":
+      await runPairwise(opt("run") ?? latestRunDir(), opt("model") ?? "claude-fable-5-1", opt("scope") === "full" ? "full" : "top");
       return;
     case "quick-report":
       process.stdout.write(quickReport());
