@@ -1,0 +1,86 @@
+// `npm run distill:ab -- <command>` and `npm run distill:grade`. Experiment
+// code: never a vir command, never shipped (eval/ compiles to eval/dist).
+import { buildAndWriteGradingSet } from "./gradingSetIo.js";
+import { runGrader } from "./grade.js";
+import { prepareDistillHomes } from "./homes.js";
+import { runJudge } from "./judgeRun.js";
+import { writeCalibratedReport, writeReport } from "./reportRun.js";
+import { latestRunDir, runDistillAb, runNewArm } from "./run.js";
+import { join } from "node:path";
+import { REPO_ROOT } from "../repo.js";
+import { quickReport, runQuick } from "./quickRun.js";
+import { runPairwise } from "./pairwiseRun.js";
+
+const DEFAULT_SEED = 20260915;
+
+function flag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+function opt(name: string): string | undefined {
+  const i = process.argv.indexOf(`--${name}`);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+const USAGE = `usage: npm run distill:ab -- <command>
+
+  homes         prepare shared/control/challenger homes under ~/.vir/eval/distill/homes [--refresh]
+  run           classify once, then distill every sample transcript under both arms [--dry-run] [--reclassify] [--resume <dir>]
+  grading-set   shuffle the latest run into opaque-id notes + sealed mapping [--seed N] [--refresh]
+  judge         model preview of the rubric (sealed, not shown) [--model <id>]
+  report        unblind and write <run>/report.md (requires every note graded)
+  report-calibrated   judges over all pairs + human subset agreement [--models a,b]
+
+  npm run distill:quick                 5-minute forced choice on note tops, 15 pairs
+  quick-report                          unblind the quick test
+  npm run distill:grade                 grade all notes one at a time
+  npm run distill:grade -- --pairs 5    grade a seeded subset of 5 whole pairs (10 notes)`;
+
+async function main(): Promise<void> {
+  const cmd = process.argv[2];
+  const seed = Number.parseInt(opt("seed") ?? String(DEFAULT_SEED), 10);
+  switch (cmd) {
+    case "homes":
+      await prepareDistillHomes({ refresh: flag("refresh") });
+      return;
+    case "run":
+      await runDistillAb({ dryRun: flag("dry-run"), reclassify: flag("reclassify"), resumeDir: opt("resume") });
+      return;
+    case "grading-set":
+      buildAndWriteGradingSet(opt("run") ?? latestRunDir(), seed, flag("refresh"));
+      return;
+    case "grade": {
+      const pairs = opt("pairs");
+      await runGrader({ pairs: pairs ? Number.parseInt(pairs, 10) : undefined, seed });
+      return;
+    }
+    case "judge":
+      await runJudge(opt("model") ?? "claude-sonnet-5");
+      return;
+    case "report":
+      process.stdout.write(writeReport());
+      return;
+    case "quick":
+      await runQuick(opt("run") ?? latestRunDir(), seed, opt("tag") ?? "");
+      return;
+    case "run-combined":
+      await runNewArm({ mdPath: join(REPO_ROOT, "eval", "distill", "COMBINED.md"), fromRun: opt("from") ?? latestRunDir(), home: "combined", tag: "v2" });
+      return;
+    case "pairwise":
+      await runPairwise(opt("run") ?? latestRunDir(), opt("model") ?? "claude-fable-5-1", opt("scope") === "full" ? "full" : "top", opt("tag") ?? "");
+      return;
+    case "quick-report":
+      process.stdout.write(quickReport(opt("tag") ?? ""));
+      return;
+    case "report-calibrated":
+      process.stdout.write(writeCalibratedReport((opt("models") ?? "claude-fable-5-1,claude-sonnet-5").split(",")));
+      return;
+    default:
+      process.stderr.write(`${USAGE}\n`);
+      process.exit(cmd ? 2 : 0);
+  }
+}
+
+main().catch((err: unknown) => {
+  process.stderr.write(`distill:ab failed: ${(err as Error).stack ?? String(err)}\n`);
+  process.exit(1);
+});

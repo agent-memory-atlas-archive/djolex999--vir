@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+**The distill prompt now writes for both of a note's readers.** A blind A/B
+on 15 real transcripts (`eval/distill/`, never shipped) found the notes have
+two readers with opposite needs: the human skimming a month later wanted the
+opening to say what the session was (14 of 15 forced choices), and a model
+standing in for a retrieving session wanted state and specifics first (14 of
+15, same test, both side orders). The new prompt asks for both, in that
+order, and passed a rule fixed before any output existed: the human no longer
+preferred the old prompt (8 to 7) and the model preferred the new one (10 to 1
+on full notes, p = 0.012).
+
+- **Summary, sentence one:** what the session was, in plain words. **Sentence
+  two:** the single most important thing it established, with the file,
+  function, command, number or constraint that carries it.
+- **Decisions say what was chosen and what it was chosen over.** Context stops
+  repeating the project, category and date already in frontmatter.
+- **"You are writing a page about the session, not replying to it."** A longer
+  experimental prompt once made Haiku echo a session's closing chat message
+  instead of writing a note; this line is the guard, and the failure did not
+  recur across the test set.
+- **Distill output cap 1500 → 2500 tokens.** Notes under this prompt average
+  about 540 words, and the old cap was already cutting 550-590-word notes
+  mid-sentence on the API path. Worst-case added cost is about $0.015 per note.
+- The prompt text lives in one exported function, `buildDistillPrompt`, pinned
+  byte-for-byte to the tested file by a test. The output contract is unchanged
+  (marker-less body, same three headings, no Related section, title still from
+  classify), so nothing downstream moves.
+- **Existing notes are untouched.** Only new distills get the new shape; most
+  old transcripts are gone, so there is no backfill. A `--full` run re-distills
+  the few sessions whose transcripts still exist.
+
+Honest limits: one human grader, note tops only, 15 transcripts; the model
+judge is the same family as the distiller, so its verdict is a preview, not
+verification.
+
 ## 0.17.8 — 2026-09-11
 
 **Distill failures are now visible while they can still be fixed.** `vir run`
