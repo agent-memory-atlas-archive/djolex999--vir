@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.18.0 — 2026-09-18
 
 **The distill prompt now writes for both of a note's readers.** A blind A/B
 on 15 real transcripts (`eval/distill/`, never shipped) found the notes have
