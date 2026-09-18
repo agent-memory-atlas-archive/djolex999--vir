@@ -29,7 +29,7 @@ Two repos (`vir` CLI at 0.12.0 local / 0.11.2 npm; `vir-obsidian` plugin at 0.2.
 ## Related
 
 - [silent-failure class unfinished](/vault/gotchas/silent-failure-class-unfinished-7bfa9706/)
+- dry-run-bypass-in-conditional-branches
+- ollama-probe-null-breaks-inference
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
 - [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
-- [time-window selection resolves schema tension](/vault/decisions/time-window-selection-resolves-schema-tension-3745b31b/)
-- security-audit-patch
-- [search-result-filtering](/vault/gotchas/search-result-filtering-01e12b99/)

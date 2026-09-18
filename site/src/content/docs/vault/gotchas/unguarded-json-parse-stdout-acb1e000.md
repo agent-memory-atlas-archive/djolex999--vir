@@ -31,8 +31,8 @@ The developer investigated a potential security vulnerability in the `vir` proje
 
 ## Related
 
-- json-output-contract
 - [search-result-filtering](/vault/gotchas/search-result-filtering-01e12b99/)
-- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
-- untyped-json-parsing
 - [json-output-contract](/vault/decisions/json-output-contract-7bcca3cb/)
+- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
+- [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
+- [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)

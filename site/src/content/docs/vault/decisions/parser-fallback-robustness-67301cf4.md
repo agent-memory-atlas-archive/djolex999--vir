@@ -38,4 +38,4 @@ This session implemented `vir compose`, a new CLI command for the vir tool (v0.7
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [search-result-filtering](/vault/gotchas/search-result-filtering-01e12b99/)
-- force-model override injection
+- [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)

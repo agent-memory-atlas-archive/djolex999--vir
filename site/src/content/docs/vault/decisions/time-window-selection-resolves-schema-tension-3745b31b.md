@@ -40,4 +40,4 @@ This session shipped three vir-cli releases (0.10.0 period summaries, 0.11.0 PDF
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
-- [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)

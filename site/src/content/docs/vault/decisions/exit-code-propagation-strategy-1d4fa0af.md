@@ -46,4 +46,4 @@ The `vir reconcile` command retries sessions with `skipped=0` and `content IS NU
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
 - [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
+- security-audit-patch

@@ -46,6 +46,6 @@ Related files using `callKie`/`KieTimeoutError`/`withRateLimitRetry`: 9 modules 
 
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
-- force-model override injection
+- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
+- [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)

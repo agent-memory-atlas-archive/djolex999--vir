@@ -24,8 +24,8 @@ Session covered: saving a strategy doc, brainstorming and writing a new thesis-a
 
 ## Related
 
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)
 - [readme-restructure-badges](/vault/decisions/readme-restructure-badges-b71e2ae1/)
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [active-learning-review-loop](/vault/patterns/active-learning-review-loop-f41385ca/)
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)

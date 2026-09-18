@@ -32,4 +32,4 @@ The `vir` project added a new MCP tool `vir_compose` that generates topic pages 
 - [unguarded-json-parse-stdout](/vault/gotchas/unguarded-json-parse-stdout-acb1e000/)
 - [error-handling-refactor](/vault/decisions/error-handling-refactor-daa71c94/)
 - trailing-path-delimiter-cwd-search
-- argument-injection-no-separator
+- argument-injection-cli-argv

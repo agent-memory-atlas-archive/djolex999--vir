@@ -27,6 +27,6 @@ Decision: extend vir's distillation pipeline with three additive, reversible fil
 
 - [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)
 - [thesis-as-launch-launchpad](/vault/decisions/thesis-as-launch-launchpad-395d2f80/)
 - [time-window selection resolves schema tension](/vault/decisions/time-window-selection-resolves-schema-tension-3745b31b/)

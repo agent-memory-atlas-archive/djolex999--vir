@@ -38,4 +38,4 @@ The session was a security review of four changed files in the `vir` project, fo
 - [mcp-tools-architecture](/vault/decisions/mcp-tools-architecture-953519c3/)
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
 - [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
-- json-output-contract
+- security-audit-patch

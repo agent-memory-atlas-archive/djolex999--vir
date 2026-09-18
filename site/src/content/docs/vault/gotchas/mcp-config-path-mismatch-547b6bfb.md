@@ -46,5 +46,5 @@ claude mcp add --scope user vir -- vir mcp   # user scope = all projects
 - pnpm-filter-run-keyword
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
 - pre-scaffold-state
-- server-auth-boilerplate
 - duplicate-subscription-prevention
+- auth-onboarding-routing

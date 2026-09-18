@@ -67,8 +67,8 @@ After publishing `0.1.1`, `npm view @scope/pkg version` still returned `0.1.0` f
 
 ## Related
 
-- server-auth-boilerplate
-- parallel-data-fetching
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
+- [embedding-model-tradeoff-bundleable](/vault/decisions/embedding-model-tradeoff-bundleable-2608f39e/)
 - multi-api-integration-architecture
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
-- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
+- ollama-probe-null-breaks-inference
+- [time-window selection resolves schema tension](/vault/decisions/time-window-selection-resolves-schema-tension-3745b31b/)

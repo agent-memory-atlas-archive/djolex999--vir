@@ -29,7 +29,7 @@ A topic-filtering safeguard was added to the JSON output contract (`buildQueryRe
 ## Related
 
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
-- [skill-result-stripping](/vault/patterns/skill-result-stripping-agent-a0/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
 - pnpm-filter-run-keyword
 - [unguarded-json-parse-stdout](/vault/gotchas/unguarded-json-parse-stdout-acb1e000/)
+- business-category-filtering

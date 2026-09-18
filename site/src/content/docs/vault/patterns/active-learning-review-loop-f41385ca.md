@@ -30,8 +30,8 @@ Implemented `vir review` (active learning command) for the vir project, bumped t
 
 ## Related
 
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
 - [mmr-reranking-integration](/vault/patterns/mmr-reranking-integration-573d0e9f/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
 - [readme-restructure-badges](/vault/decisions/readme-restructure-badges-b71e2ae1/)
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
-- [cost-recording-retry-safety](/vault/patterns/cost-recording-retry-safety-agent-ae/)

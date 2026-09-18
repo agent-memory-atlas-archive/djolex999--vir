@@ -43,7 +43,7 @@ Vir is a CLI tool that indexes Claude Code sessions into a structured knowledge 
 ## Related
 
 - [silent-failure class unfinished](/vault/gotchas/silent-failure-class-unfinished-7bfa9706/)
+- [stale-bug-hunt-docs-mask-fixes](/vault/gotchas/stale-bug-hunt-docs-mask-fixes-4e2d8934/)
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
-- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
-- [search-result-filtering](/vault/gotchas/search-result-filtering-01e12b99/)
-- [unguarded-json-parse-stdout](/vault/gotchas/unguarded-json-parse-stdout-acb1e000/)
+- silent-database-failure-on-success-path
+- dry-run-bypass-in-conditional-branches

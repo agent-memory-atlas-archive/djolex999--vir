@@ -41,4 +41,4 @@ This session completed the vir v0.3.4 docs release: restructuring the README, cr
 - [tool-output-bounding-strategy](/vault/decisions/tool-output-bounding-strategy-7eef1373/)
 - security-audit-patch
 - [llm-wiki-ingestion](/vault/patterns/llm-wiki-ingestion-0393252f/)
-- [cost-logging-architecture](/vault/decisions/cost-logging-architecture-e16e7aec/)
+- [retroactive-transcript-archaeology-positioning](/vault/decisions/retroactive-transcript-archaeology-positioning-b86ba9dc/)

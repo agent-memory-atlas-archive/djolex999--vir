@@ -53,8 +53,8 @@ The vir CLI is a TypeScript daemon that extracts durable knowledge from Claude C
 
 ## Related
 
+- ollama-probe-null-breaks-inference
+- [queryable-retrieval-audit-trail](/vault/patterns/queryable-retrieval-audit-trail-a2bc5634/)
 - [exit-code-propagation-strategy](/vault/decisions/exit-code-propagation-strategy-1d4fa0af/)
 - [fetch-timeout-safety](/vault/patterns/fetch-timeout-safety-2140b459/)
 - [api-provider-abstraction](/vault/patterns/api-provider-abstraction-ef978932/)
-- [parser-fallback-robustness](/vault/decisions/parser-fallback-robustness-67301cf4/)
-- security-audit-patch
