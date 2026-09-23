@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { selectReconcileTargets } from "./reconcile.js";
+import { describe, expect, it, vi } from "vitest";
+import { handleMissingSource, selectReconcileTargets } from "./reconcile.js";
 import type { SessionRow } from "../state/db.js";
 
 function row(overrides: Partial<SessionRow>): SessionRow {
@@ -92,5 +92,23 @@ describe("selectReconcileTargets — retry bound", () => {
       "/f.jsonl",
       "/g.jsonl",
     ]);
+  });
+});
+
+describe("handleMissingSource — transcript gone from disk", () => {
+  it("clears the stale error when an earlier good note survives", () => {
+    // Regression: a missing-file skip ran before this branch, so a good prior
+    // distill + a later error + a deleted transcript never reached clearError
+    // and the note stayed hidden from listDistilled forever.
+    const clearError = vi.fn();
+    const t = row({ path: "/gone.jsonl", content: "old good note", error: "fetch failed" });
+    expect(handleMissingSource(t, clearError)).toBe("restored");
+    expect(clearError).toHaveBeenCalledWith("/gone.jsonl");
+  });
+
+  it.each([null, ""])("reports missing and leaves the row alone when content is %j", (content) => {
+    const clearError = vi.fn();
+    expect(handleMissingSource(row({ content }), clearError)).toBe("missing");
+    expect(clearError).not.toHaveBeenCalled();
   });
 });

@@ -59,6 +59,19 @@ export function selectReconcileTargets(
   );
 }
 
+// A target whose transcript is gone can't be retried. If an earlier good
+// distill survives (the orphan shape: error set, content kept), the stale
+// error is the only thing hiding that note from listDistilled — clear it.
+// Must run BEFORE any missing-file skip, or the orphan is stranded forever.
+export function handleMissingSource(
+  t: Pick<SessionRow, "path" | "content">,
+  clearError: (path: string) => void,
+): "restored" | "missing" {
+  if (t.content === null || t.content === "") return "missing";
+  clearError(t.path);
+  return "restored";
+}
+
 export interface ReconcileTargetSummary {
   path: string;
   sessionId: string;
@@ -254,37 +267,25 @@ export async function runReconcile(
 
     for (const t of targets) {
       if (!existsSync(t.path)) {
-        missingFile += 1;
-        ui.row(
-          ui.warn(ui.WARN_GLYPH),
-          ui.text(`missing on disk — skipped: ${t.path.slice(-60)}`),
-        );
+        if (handleMissingSource(t, (p) => db.clearError(p)) === "restored") {
+          recovered += 1;
+          ui.row(
+            ui.success(ui.CHECK),
+            ui.text("source gone — restored last good note"),
+          );
+        } else {
+          missingFile += 1;
+          ui.row(
+            ui.warn(ui.WARN_GLYPH),
+            ui.text(`missing on disk — skipped: ${t.path.slice(-60)}`),
+          );
+        }
         continue;
       }
       // Bypass the SHA-256 processed-cache check intentionally — these rows
       // are cached but we know their stored content is empty, so we want a
       // forced retry. Parse, score, distill, then update the row in place.
       try {
-        if (!existsSync(t.path)) {
-          if (t.content !== null && t.content !== "") {
-            // Source transcript is gone; the previous good distill is all
-            // that's left. Clear the stale error so the note resurfaces in
-            // listDistilled instead of staying hidden forever.
-            db.clearError(t.path);
-            recovered += 1;
-            ui.row(
-              ui.success(ui.CHECK),
-              ui.text("source gone — restored last good note"),
-            );
-            continue;
-          }
-          stillFailed += 1;
-          ui.row(
-            ui.errorColor(ui.CROSS),
-            ui.text("source transcript missing — nothing to recover"),
-          );
-          continue;
-        }
         const parsed = parseSession(t.path, t.hash);
         const score = scoreSession(parsed, cfg.filterThreshold);
         if (!score.passes) {
