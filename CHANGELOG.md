@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.18.1 — 2026-09-23
+
+**`vir reconcile` restores a note whose transcript is gone.** One fix.
+
+- **A good note could stay hidden forever.** A session that distilled
+  cleanly, then failed a later re-distill, keeps its content and gains an
+  error, and `listDistilled` hides any row with an error. Once Claude Code
+  pruned the transcript, reconcile's only move was to clear that stale
+  error, and it never did: the loop skipped every target with a missing
+  file before reaching the branch that restores it. The restore now runs
+  first. Surviving content is restored and counted as recovered; a row
+  with no content is still reported as a missing file.
+- Reported by kantorcodes1 on r/ClaudeCode, who found it by reading the
+  code. The case is now a test.
+
 ## 0.18.0 — 2026-09-18
 
 **The distill prompt now writes for both of a note's readers.** A blind A/B
