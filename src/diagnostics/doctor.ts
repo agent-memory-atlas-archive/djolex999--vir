@@ -41,6 +41,10 @@ import { isClaudeAvailable, isInstalled } from "../mcp/install.js";
 import { gatherProjectsReport } from "../cli/projects.js";
 import { StateDb } from "../state/db.js";
 import { distillFailureCheck } from "./distillFailures.js";
+import {
+  preflightFailureCheck,
+  readPreflightFailure,
+} from "./preflightFailure.js";
 import { buildDoctorResult } from "../output/json.js";
 import * as ui from "../ui/display.js";
 
@@ -173,6 +177,14 @@ async function checkApiKey(cfg: Config): Promise<CheckResult> {
   } catch (err) {
     return fail("api key", `${provider} · ${truncate((err as Error).message)}`);
   }
+}
+
+// ── 2b. last run's provider preflight ────────────────────────────────────────
+// Separate from provider auth on purpose: that row pings from the user's shell,
+// while this one reports what the last run actually saw, and the daemon runs
+// under launchd with its own environment.
+function checkProviderPreflight(): CheckResult | null {
+  return preflightFailureCheck(readPreflightFailure(), Date.now());
 }
 
 // ── 3. vault path ─────────────────────────────────────────────────────────────
@@ -804,6 +816,8 @@ export async function runDoctor(): Promise<void> {
 
   if (cfg) {
     record(await checkApiKey(cfg));
+    const preflight = checkProviderPreflight();
+    if (preflight) record(preflight);
     record(checkVaultPath(cfg));
     record(checkOutputDir(cfg));
     record(checkSessions(cfg));

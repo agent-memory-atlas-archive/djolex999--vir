@@ -13,6 +13,11 @@ import {
 import { computeCost } from "../cost/pricing.js";
 import { scoreSession } from "./filter.js";
 import { failureNotice } from "../diagnostics/distillFailures.js";
+import {
+  clearPreflightFailure,
+  preflightFailureNotice,
+  recordPreflightFailure,
+} from "../diagnostics/preflightFailure.js";
 import { parseSession } from "./parser.js";
 import { scanSessions } from "./scanner.js";
 import { scanArticles } from "./articleReader.js";
@@ -791,14 +796,26 @@ export async function runPipeline(
   if (preflightNew > 0) {
     try {
       await probeProvider(cfg, maybeAnthropicClient(cfg));
+      clearPreflightFailure();
     } catch (err) {
       const msg = (err as Error).message ?? String(err);
       fileLog(`provider preflight failed: ${msg}`);
+      // It aborts before the loop, so no error rows exist for failureNotice
+      // or doctor's distill-failures row to find: without these two, a daemon
+      // run that dies here is visible only as a stack trace in daemon.log.
+      recordPreflightFailure({
+        at: new Date().toISOString(),
+        provider: cfg.provider,
+        message: msg,
+      });
       if (interactive) {
         ui.row(
           ui.errorColor(ui.CROSS),
           ui.text(`provider ${cfg.provider} unreachable — ${msg}`),
         );
+      } else if (cfg.notifications !== false) {
+        const notice = preflightFailureNotice(cfg.provider, msg);
+        notify(notice.title, notice.message);
       }
       db.close();
       throw new Error(
