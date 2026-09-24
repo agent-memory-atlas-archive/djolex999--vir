@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.18.2 — 2026-09-24
+
+**A failed provider preflight now reaches you.** One fix.
+
+- **A logged-out daemon was silent.** The preflight probe aborts a run
+  before the distill loop, so it records no per-session error rows. That
+  part is deliberate: one outage is one fact, not N session failures. But
+  it also meant the distill-failures notification and doctor row never
+  fired. From 2026-09-23 every daemon run died on
+  `Failed to authenticate: OAuth session expired`, and the only trace was a
+  stack trace in `daemon.log`.
+- **Now a failed preflight on a daemon run sends one desktop notification**
+  naming the provider and the error. For a logged-out claude-cli it says
+  what to do: run `claude` and `/login`. `notifications: false` silences it;
+  interactive runs already print the error and don't notify.
+- **`vir doctor` has a new `provider preflight` row.** Each failure is kept
+  in `~/.vir/provider-preflight.failed` and cleared by the next successful
+  probe. A failure from the last 2 days is a fail, an older one a warning.
+  It sits apart from `provider auth` because that row pings from your shell,
+  while this one reports what the last real run saw.
+- Retry and attempt-counter behaviour is unchanged.
+
 ## 0.18.1 — 2026-09-23
 
 **`vir reconcile` restores a note whose transcript is gone.** One fix.
