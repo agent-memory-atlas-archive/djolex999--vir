@@ -23,7 +23,7 @@ export const INSTALL_CMD = `npm install -g ${NPM_PKG}`;
 //   transcriptsSeen  — rows in the sessions table
 //   transcriptsNoise — skip_reason in (workflow-transcript, agent-transcript, sidechain-transcript)
 //   transcriptsNotes — skipped=0 and note_paths != '[]'
-//   tests            — `npx vitest run src` at the repo root, 2026-09-23 (610 CLI; the eval
+//   tests            — `npx vitest run src` at the repo root, 2026-09-24 (612 CLI; the eval
 //                      harness's and the site's tests are separate)
 //   cost*            — `vir cost --since 180d`
 export const NUMBERS = {
@@ -31,7 +31,7 @@ export const NUMBERS = {
   transcriptsSeen: 1429,
   transcriptsNoise: 601,
   transcriptsNotes: 411,
-  tests: 610 as number | null,
+  tests: 612 as number | null,
   costWindow: "six months",
   costSessions: 296,
   costTotal: "$22.23" as string | null,
