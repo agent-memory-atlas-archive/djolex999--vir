@@ -1,10 +1,18 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Config } from "../config.js";
+import { LockHeldError } from "../pipeline/lock.js";
 import { StateDb } from "../state/db.js";
-import { strayFileCheck } from "./strayFiles.js";
+import { demoteStrays, strayFileCheck } from "./strayFiles.js";
 
 let root: string;
 let vault: string;
@@ -119,5 +127,104 @@ describe("strayFileCheck", () => {
     }
 
     expect(strayFileCheck(cfg(), db).strays).toEqual([]);
+  });
+});
+
+describe("demoteStrays", () => {
+  let lockPath: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "vir-stray-fix-"));
+    vault = join(root, "vault");
+    lockPath = join(root, "vir.lock");
+    db = new StateDb(join(root, "vir.db"));
+  });
+  afterEach(() => {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  const notes = (): string => join(vault, "vir", "patterns");
+  const archived = (): string => join(vault, "vir", "archived");
+
+  it("moves a retitle duplicate into archived/ and leaves the live note", () => {
+    seed({ sessionId: "aaaa1111", topic: "new title" });
+    writeNote("new-title-aaaa1111");
+    writeNote("old-title-aaaa1111");
+
+    const r = demoteStrays(cfg(), strayFileCheck(cfg(), db), { lockPath });
+
+    expect(r.moved).toBe(1);
+    expect(existsSync(join(notes(), "old-title-aaaa1111.md"))).toBe(false);
+    expect(existsSync(join(archived(), "old-title-aaaa1111.md"))).toBe(true);
+    expect(existsSync(join(notes(), "new-title-aaaa1111.md"))).toBe(true);
+    expect(strayFileCheck(cfg(), db).strays).toEqual([]);
+  });
+
+  // Neither kind has a live sibling vouching for its content: an `unknown` may
+  // be the only copy, and a pruned leftover's canonical home is `.rejected/`,
+  // which prune --restore reads by exact name. Both are reported, never moved.
+  it("never moves an unknown stray or a pruned leftover", () => {
+    writeNote("who-knows-cccc3333");
+    seed({ sessionId: "dddd4444", topic: "pruned topic", pruned: true });
+    writeNote("pruned-topic-dddd4444");
+
+    const r = demoteStrays(cfg(), strayFileCheck(cfg(), db), { lockPath });
+
+    expect(r.moved).toBe(0);
+    expect(r.left).toBe(2);
+    expect(existsSync(join(notes(), "who-knows-cccc3333.md"))).toBe(true);
+    expect(existsSync(join(notes(), "pruned-topic-dddd4444.md"))).toBe(true);
+  });
+
+  it("never overwrites a file already in archived/", () => {
+    seed({ sessionId: "aaaa1111", topic: "new title" });
+    writeNote("new-title-aaaa1111");
+    writeNote("old-title-aaaa1111");
+    mkdirSync(archived(), { recursive: true });
+    writeFileSync(join(archived(), "old-title-aaaa1111.md"), "earlier copy\n");
+
+    demoteStrays(cfg(), strayFileCheck(cfg(), db), { lockPath });
+
+    expect(readFileSync(join(archived(), "old-title-aaaa1111.md"), "utf8")).toBe(
+      "earlier copy\n",
+    );
+    expect(existsSync(join(archived(), "old-title-aaaa1111-1.md"))).toBe(true);
+  });
+
+  // index.md is append-only outside --rewrite-only, so the stray's row stays
+  // behind as a dead wikilink unless it is dropped explicitly.
+  it("drops the stray's index.md row and keeps the live one", () => {
+    seed({ sessionId: "aaaa1111", topic: "new title" });
+    writeNote("new-title-aaaa1111");
+    writeNote("old-title-aaaa1111");
+    writeFileSync(
+      join(vault, "vir", "index.md"),
+      [
+        "| date | topic |",
+        "| 2026-05-01 | [[patterns/new-title-aaaa1111|new title]] |",
+        "| 2026-05-01 | [[patterns/old-title-aaaa1111|old title]] |",
+      ].join("\n"),
+    );
+
+    demoteStrays(cfg(), strayFileCheck(cfg(), db), { lockPath });
+
+    const index = readFileSync(join(vault, "vir", "index.md"), "utf8");
+    expect(index).toContain("new-title-aaaa1111|");
+    expect(index).not.toContain("old-title-aaaa1111|");
+  });
+
+  // A running `vir run` may be writing this very session's note; moving files
+  // underneath it is exactly the race the pipeline lock exists to prevent.
+  it("refuses to run while the pipeline lock is held", () => {
+    seed({ sessionId: "aaaa1111", topic: "new title" });
+    writeNote("new-title-aaaa1111");
+    writeNote("old-title-aaaa1111");
+    writeFileSync(lockPath, String(process.pid));
+
+    expect(() =>
+      demoteStrays(cfg(), strayFileCheck(cfg(), db), { lockPath }),
+    ).toThrow(LockHeldError);
+    expect(existsSync(join(notes(), "old-title-aaaa1111.md"))).toBe(true);
   });
 });
