@@ -245,6 +245,27 @@ export function decideProject(
   return configuredDecision === "include" ? "include" : "pending";
 }
 
+// The project dir is the FIRST segment under projectsDir — workflow and
+// subagent transcripts nest deeper (<encoded>/<session-id>/wf_*.jsonl) and
+// belong to their project, not the inner dir.
+function projectDirOf(path: string, projectsDir: string): string {
+  const rel = relative(projectsDir, path);
+  return !rel.startsWith("..") && rel.includes(sep)
+    ? (rel.split(sep)[0] ?? basename(dirname(path)))
+    : basename(dirname(path));
+}
+
+// A single transcript's decoded project name — the same name groupByProject
+// and the project decisions use, so the classifier's project hint agrees
+// with them.
+export function projectNameFor(
+  path: string,
+  projectsDir: string,
+  deps?: Partial<DecodeDeps>,
+): string {
+  return decodeProjectName(projectDirOf(path, projectsDir), projectsDir, deps);
+}
+
 export interface ProjectGroup {
   name: string;
   sessions: Array<{ path: string; hash: string; size: number }>;
@@ -263,14 +284,7 @@ export function groupByProject(
   const cache = new Map<string, string>();
   const groups = new Map<string, ProjectGroup>();
   for (const s of sessions) {
-    // The project dir is the FIRST segment under projectsDir — workflow and
-    // subagent transcripts nest one level deeper (<encoded>/<session-id>/
-    // wf_*.jsonl) and must group under their project, not the inner dir.
-    const rel = relative(projectsDir, s.path);
-    const dirName =
-      !rel.startsWith("..") && rel.includes(sep)
-        ? (rel.split(sep)[0] ?? basename(dirname(s.path)))
-        : basename(dirname(s.path));
+    const dirName = projectDirOf(s.path, projectsDir);
     let name = cache.get(dirName);
     if (name === undefined) {
       name = decodeProjectName(dirName, projectsDir, deps);

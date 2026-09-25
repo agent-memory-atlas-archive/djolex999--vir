@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -198,5 +198,29 @@ describe("parseSession — first-user-line entrypoint (agent-transcript backstop
     const parsed = parseSession(p, "h");
     rmSync(d, { recursive: true, force: true });
     expect(parsed.entrypoint).toBeNull();
+  });
+});
+
+describe("parseSession — projectSlug", () => {
+  const line = {
+    type: "user",
+    message: { role: "user", content: "hi" },
+    timestamp: "2026-07-30T10:00:00Z",
+  };
+
+  it("defaults to the transcript's parent dir name", () => {
+    const sub = join(dir, "-Users-me-projects-app");
+    mkdirSync(sub);
+    const p = join(sub, "s.jsonl");
+    writeFileSync(p, JSON.stringify(line));
+    expect(parseSession(p, "h").projectSlug).toBe("-Users-me-projects-app");
+  });
+
+  it("uses the caller's decoded project name when given", () => {
+    const sub = join(dir, "-Users-me-projects-app--claude-worktrees-wt-1a2b3c");
+    mkdirSync(sub);
+    const p = join(sub, "s.jsonl");
+    writeFileSync(p, JSON.stringify(line));
+    expect(parseSession(p, "h", "app").projectSlug).toBe("app");
   });
 });

@@ -37,6 +37,7 @@ import {
   classifyTranscript,
   estimateSessionCost,
   groupByProject,
+  projectNameFor,
   readTranscriptHead,
 } from "./pipeline/projects.js";
 import {
@@ -488,7 +489,11 @@ program
 
     // Same pipeline as production up to (but NOT including) writer.write / db.record.
     // classify always runs on Haiku (matches production); only distill varies.
-    const parsed = parseSession(found.path, found.hash);
+    const parsed = parseSession(
+      found.path,
+      found.hash,
+      projectNameFor(found.path, cfg.claudeProjectsDir),
+    );
     const score = scoreSession(parsed, cfg.filterThreshold);
     const scrubbedSummary = scrub(parsed.rawSummary);
     const scrubbedContent = scrub(

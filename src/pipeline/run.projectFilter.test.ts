@@ -56,11 +56,11 @@ vi.mock("./scanner.js", () => ({
 }));
 
 vi.mock("./parser.js", () => ({
-  parseSession: (path: string, hash: string) => ({
+  parseSession: (path: string, hash: string, projectSlug?: string) => ({
     path,
     hash,
     sessionId: path.split("/").pop()?.replace(".jsonl", "") ?? "s",
-    projectSlug: "demo",
+    projectSlug: projectSlug ?? "raw-dir-slug",
     startedAt: null,
     endedAt: null,
     lineCount: 10,
@@ -239,6 +239,10 @@ describe("runPipeline — project filtering at the scan phase", () => {
       });
       expect(spies.distill).toHaveBeenCalledTimes(1);
       expect(skipRowsFor("project-pending")).toHaveLength(0);
+      // The classifier's project hint is the decoded parent, not the raw
+      // encoded worktree dir.
+      const parsed = (spies.distill.mock.calls[0] as unknown[] | undefined)?.[0];
+      expect(parsed).toMatchObject({ projectSlug: "myrepo" });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

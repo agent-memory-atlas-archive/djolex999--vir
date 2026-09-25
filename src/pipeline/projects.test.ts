@@ -6,6 +6,7 @@ import {
   decodeProjectName,
   estimateSessionCost,
   groupByProject,
+  projectNameFor,
   readTranscriptHead,
   sniffAgentEntrypoint,
 } from "./projects.js";
@@ -311,6 +312,40 @@ describe("decideProject — three states plus one-off run flags", () => {
 
   it("--only over an undecided project keeps it undecided (flag-skip, not silent include)", () => {
     expect(decideProject("mystery", cfg, { only: ["vir"] })).toBe("flag-skip");
+  });
+});
+
+describe("projectNameFor — a transcript path's decoded project name", () => {
+  it("decodes a top-level session to its project", () => {
+    expect(
+      projectNameFor(`${PROJECTS_DIR}/-Users-djmarkovic999-projects-pripremi-rs/a.jsonl`, PROJECTS_DIR, deps),
+    ).toBe("pripremi.rs");
+  });
+
+  it("decodes a worktree session to its parent repo", () => {
+    expect(
+      projectNameFor(
+        `${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir--claude-worktrees-vir-logo-prompt-fe3473/a.jsonl`,
+        PROJECTS_DIR,
+        deps,
+      ),
+    ).toBe("vir");
+  });
+
+  it("uses the first dir under projectsDir for nested workflow transcripts", () => {
+    expect(
+      projectNameFor(
+        `${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir/2ce5eb51/subagents/agent-1.jsonl`,
+        PROJECTS_DIR,
+        deps,
+      ),
+    ).toBe("vir");
+  });
+
+  it("falls back to the parent dir name outside projectsDir", () => {
+    expect(projectNameFor("/elsewhere/some-dir/a.jsonl", PROJECTS_DIR, deps)).toBe(
+      "some-dir",
+    );
   });
 });
 

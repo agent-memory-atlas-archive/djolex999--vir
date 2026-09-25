@@ -11,7 +11,13 @@ const FILE_TOOLS = new Set([
   "MultiEdit",
 ]);
 
-export function parseSession(path: string, hash: string): ParsedSession {
+// projectSlug: the decoded project name (projectNameFor) when the caller has
+// it; defaults to the raw encoded transcript dir.
+export function parseSession(
+  path: string,
+  hash: string,
+  projectSlug: string = basename(dirname(path)),
+): ParsedSession {
   const raw = readFileSync(path, "utf8");
   const lines = raw.split("\n").filter((l) => l.trim().length > 0);
 
@@ -121,7 +127,7 @@ export function parseSession(path: string, hash: string): ParsedSession {
     path,
     hash,
     sessionId: basename(path, ".jsonl"),
-    projectSlug: basename(dirname(path)),
+    projectSlug,
     startedAt,
     endedAt,
     lineCount: lines.length,
