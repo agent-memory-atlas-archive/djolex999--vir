@@ -36,6 +36,11 @@ export interface ParsedSession {
   // SDK-launched harness agents, "cli"/"claude-desktop" for human sessions).
   // Content-level backstop for the agent-transcript filter.
   entrypoint: string | null;
+  // Every git branch the session's lines were recorded on, in first-seen order
+  // (a session can switch branches). Kept because it cannot be recovered later:
+  // Claude Code deletes transcripts after ~30 days. Nothing reads it yet — a
+  // future check can flag notes whose branch never merged.
+  branches: string[];
 }
 
 export type Category = "pattern" | "gotcha" | "decision" | "tool";

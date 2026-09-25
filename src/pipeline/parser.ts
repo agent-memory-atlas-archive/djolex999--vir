@@ -26,6 +26,7 @@ export function parseSession(
   let toolCallCount = 0;
   let isSidechain = false;
   let entrypoint: string | null = null;
+  const branches = new Set<string>();
   const filesTouched = new Set<string>();
   const assistantBlocks: string[] = [];
   const userBlocks: string[] = [];
@@ -50,6 +51,15 @@ export function parseSession(
       typeof evt.entrypoint === "string"
     ) {
       entrypoint = evt.entrypoint;
+    }
+
+    // "HEAD" is a detached checkout and names no branch.
+    if (
+      typeof evt.gitBranch === "string" &&
+      evt.gitBranch.length > 0 &&
+      evt.gitBranch !== "HEAD"
+    ) {
+      branches.add(evt.gitBranch);
     }
 
     const ts = typeof evt.timestamp === "string" ? evt.timestamp : null;
@@ -139,6 +149,7 @@ export function parseSession(
     transcriptText,
     isSidechain,
     entrypoint,
+    branches: [...branches],
   };
 }
 

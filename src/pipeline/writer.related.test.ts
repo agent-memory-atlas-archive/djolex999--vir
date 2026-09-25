@@ -63,6 +63,7 @@ function session(id: string): ParsedSession {
     userText: "",
     rawSummary: "",
     transcriptText: "",
+    branches: [],
   } as unknown as ParsedSession;
 }
 

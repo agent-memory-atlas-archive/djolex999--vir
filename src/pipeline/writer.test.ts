@@ -35,7 +35,10 @@ function makeCfg(vaultPath: string): Config {
   };
 }
 
-function makeSession(sessionId = "abc12345"): ParsedSession {
+function makeSession(
+  sessionId = "abc12345",
+  branches: string[] = [],
+): ParsedSession {
   return {
     path: `/x/${sessionId}.jsonl`,
     hash: "",
@@ -50,7 +53,8 @@ function makeSession(sessionId = "abc12345"): ParsedSession {
     userText: "",
     rawSummary: "",
     transcriptText: "",
-  };
+    branches,
+  } as ParsedSession;
 }
 
 function makeNote(
@@ -145,6 +149,39 @@ describe("VaultWriter write modes", () => {
     await writer.write(makeSession(), makeNote(), "rewrite");
     const after = readFileSync(notePath!, "utf8");
     expect(after).toContain('themes:\n  - "alpha"\n  - "beta"');
+  });
+
+  // Which branches the session ran on is recorded now because it cannot be
+  // recovered later: Claude Code deletes the transcript after ~30 days.
+  it("writes a branches: YAML list when the session ran on branches", async () => {
+    const writer = new VaultWriter(makeCfg(vault), null);
+    const [notePath] = await writer.write(
+      makeSession("abc12345", ["feat/kie-flare-1k", "main"]),
+      makeNote(),
+    );
+    expect(readFileSync(notePath!, "utf8")).toContain(
+      'branches:\n  - "feat/kie-flare-1k"\n  - "main"',
+    );
+  });
+
+  it("omits the branches key when the transcript recorded none", async () => {
+    const writer = new VaultWriter(makeCfg(vault), null);
+    const [notePath] = await writer.write(makeSession(), makeNote());
+    expect(readFileSync(notePath!, "utf8")).not.toContain("branches:");
+  });
+
+  // A --rewrite-only pass rebuilds the session from DB columns, with no
+  // transcript behind it, so it has no branches to write. The block must survive.
+  it("preserves the existing branches block on a rewrite that carries none", async () => {
+    const writer = new VaultWriter(makeCfg(vault), null);
+    const [notePath] = await writer.write(
+      makeSession("abc12345", ["claude/audit-9882c1"]),
+      makeNote(["alpha"]),
+    );
+    await writer.write(makeSession(), makeNote(), "rewrite");
+    const after = readFileSync(notePath!, "utf8");
+    expect(after).toContain('branches:\n  - "claude/audit-9882c1"');
+    expect(after).toContain('themes:\n  - "alpha"');
   });
 
   it("preserves a reviewer's verified/reviewed_at fields on rewrite", async () => {

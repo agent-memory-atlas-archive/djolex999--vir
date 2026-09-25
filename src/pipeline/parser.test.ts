@@ -224,3 +224,39 @@ describe("parseSession — projectSlug", () => {
     expect(parseSession(p, "h", "app").projectSlug).toBe("app");
   });
 });
+
+describe("parseSession branches", () => {
+  const line = (gitBranch: unknown, text = "hi"): object => ({
+    type: "user",
+    timestamp: "2026-05-01T10:00:00.000Z",
+    gitBranch,
+    message: { role: "user", content: text },
+  });
+
+  it("collects every branch the session ran on, in first-seen order", () => {
+    const path = writeSession([
+      line("feat/ui-tokens-refresh"),
+      line("feat/kie-flare-1k"),
+      line("feat/ui-tokens-refresh"),
+      line("main"),
+    ]);
+    expect(parseSession(path, "h").branches).toEqual([
+      "feat/ui-tokens-refresh",
+      "feat/kie-flare-1k",
+      "main",
+    ]);
+  });
+
+  // A detached HEAD names no branch, and a line without the field is not
+  // evidence of any.
+  it("skips detached HEAD, empty and missing values", () => {
+    const path = writeSession([
+      line("HEAD"),
+      line(""),
+      line(undefined),
+      line(42),
+      line("claude/audit-9882c1"),
+    ]);
+    expect(parseSession(path, "h").branches).toEqual(["claude/audit-9882c1"]);
+  });
+});
