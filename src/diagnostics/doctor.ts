@@ -47,6 +47,10 @@ import {
 } from "./preflightFailure.js";
 import { buildDoctorResult } from "../output/json.js";
 import * as ui from "../ui/display.js";
+import {
+  notifierPermission,
+  type NotifierPermission,
+} from "../ui/macNotifier.js";
 
 interface CheckResult {
   status: ui.CheckStatus;
@@ -779,6 +783,37 @@ async function checkEmbeddingProvider(
   );
 }
 
+// ── desktop notifications (macOS) ─────────────────────────────────────────────
+// null permission = the Vir.app helper is missing or failed to answer; notify()
+// still works then, just through osascript's "Script Editor" banner.
+export function notificationsCheck(
+  permission: NotifierPermission | null,
+): CheckResult {
+  const label = "notifications";
+  switch (permission) {
+    case "allowed":
+      return ok(label, "allowed for vir");
+    case "undetermined":
+      return warn(label, "not set up — run vir notifications to allow them");
+    case "denied":
+      return warn(
+        label,
+        "blocked — allow vir in System Settings → Notifications",
+      );
+    case null:
+      return warn(label, "vir helper unavailable — using Script Editor banners");
+  }
+}
+
+function checkNotifications(cfg: Config | null): CheckResult | null {
+  if (process.platform !== "darwin" || !cfg?.notifications) return null;
+  try {
+    return notificationsCheck(notifierPermission());
+  } catch {
+    return notificationsCheck(null);
+  }
+}
+
 // ── 9. Claude Code CLI ────────────────────────────────────────────────────────
 async function checkClaudeCli(): Promise<{ result: CheckResult; available: boolean }> {
   const available = await isClaudeAvailable();
@@ -846,6 +881,8 @@ export async function runDoctor(): Promise<void> {
   if (pruned) record(pruned);
   const limitPattern = checkClaudeCliLimitPattern(cfg);
   if (limitPattern) record(limitPattern);
+  const notifications = checkNotifications(cfg);
+  if (notifications) record(notifications);
 
   record(await checkOllama());
   record(await checkEmbeddingProvider(cfg));

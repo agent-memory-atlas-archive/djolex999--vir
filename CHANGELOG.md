@@ -20,6 +20,28 @@ can be undone by hand.
   the 337 live notes a 2026-09-25 audit graded, and they are the source of
   its "one session split into several notes" finding.
 
+## 0.19.0 — 2026-09-25
+
+**macOS notifications come from vir, not Script Editor.**
+
+- **They used to say "Script Editor".** `osascript display notification` is
+  attributed to Script Editor, with its icon, and there was no way to tell
+  vir's banners apart or to silence them without silencing Script Editor.
+- **Now a bundled helper app posts them.** `Vir.app` (bundle id
+  `dev.vir.app`, source in `native/notifier/`) shows as **vir** with the vir
+  icon, and gets its own entry in System Settings → Notifications. It ships
+  prebuilt: a universal, ad-hoc-signed binary, so installing needs no Swift
+  toolchain. On first use it is copied to `~/.vir/Vir.app` and registered
+  with LaunchServices.
+- **macOS asks once.** `vir init` shows the Allow prompt at the end of setup,
+  and the new `vir notifications` command shows it on demand, then sends a
+  test banner. The daemon never prompts: macOS counts a prompt that nobody
+  answers as a denial. Until notifications are allowed, vir falls back to
+  osascript as before.
+- **`vir doctor` has a new `notifications` row** (macOS, when
+  `notifications` is on). It shows allowed, not set up, blocked (with where
+  to fix it), or helper unavailable.
+
 ## 0.18.2 — 2026-09-24
 
 **A failed provider preflight now reaches you.** One fix.
