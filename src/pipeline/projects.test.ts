@@ -32,7 +32,9 @@ const TREE: Record<string, string[]> = {
     "venac3d",
     "venac3d web showcase local",
   ],
-  "/Users/djmarkovic999/projects/vir": ["src"],
+  "/Users/djmarkovic999/projects/vir": ["src", ".claude"],
+  "/Users/djmarkovic999/projects/vir/.claude": ["worktrees"],
+  "/Users/djmarkovic999/projects/vir/.claude/worktrees": ["vir-logo-prompt-fe3473"],
   "/Users/djmarkovic999/projects/venac3d": ["src"],
 };
 
@@ -98,6 +100,36 @@ describe("decodeProjectName", () => {
     expect(
       decode(`${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir`),
     ).toBe("vir");
+  });
+
+  describe("Claude Code worktrees (<repo>/.claude/worktrees/<name>)", () => {
+    it("decodes a live worktree to its parent repo, not the worktree name", () => {
+      expect(
+        decode(
+          "-Users-djmarkovic999-projects-vir--claude-worktrees-vir-logo-prompt-fe3473",
+        ),
+      ).toBe("vir");
+    });
+
+    it("decodes a since-deleted worktree to its parent repo", () => {
+      expect(
+        decode("-Users-djmarkovic999-projects-vir--claude-worktrees-gone-abc123"),
+      ).toBe("vir");
+    });
+
+    it("recovers a dotted parent name through the worktree prefix", () => {
+      expect(
+        decode(
+          "-Users-djmarkovic999-projects-pripremi-rs--claude-worktrees-fix-x-1a2b3c",
+        ),
+      ).toBe("pripremi.rs");
+    });
+
+    it("falls back raw when the parent repo itself does not resolve", () => {
+      const dir =
+        "-Users-djmarkovic999-projects-deleted-repo--claude-worktrees-w-123abc";
+      expect(decode(dir)).toBe(dir);
+    });
   });
 
   it("never throws when the filesystem is unreadable", () => {
@@ -312,6 +344,25 @@ describe("groupByProject", () => {
     const groups = groupByProject(sessions, PROJECTS_DIR, deps);
     expect(groups.size).toBe(1);
     expect(groups.get("vir")?.sessions).toHaveLength(2);
+  });
+
+  it("merges live and deleted worktree sessions into the parent repo's group", () => {
+    const sessions = [
+      { path: `${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir/a.jsonl`, hash: "h1", size: 100 },
+      {
+        path: `${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir--claude-worktrees-vir-logo-prompt-fe3473/b.jsonl`,
+        hash: "h2",
+        size: 200,
+      },
+      {
+        path: `${PROJECTS_DIR}/-Users-djmarkovic999-projects-vir--claude-worktrees-gone-abc123/c.jsonl`,
+        hash: "h3",
+        size: 300,
+      },
+    ];
+    const groups = groupByProject(sessions, PROJECTS_DIR, deps);
+    expect([...groups.keys()]).toEqual(["vir"]);
+    expect(groups.get("vir")?.totalBytes).toBe(600);
   });
 });
 

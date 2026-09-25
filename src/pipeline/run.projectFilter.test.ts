@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../config.js";
 import { runPipeline } from "./run.js";
@@ -15,7 +18,13 @@ const spies = vi.hoisted(() => ({
   probe: vi.fn(async () => {}),
   notify: vi.fn(),
   getByPath: vi.fn((..._args: unknown[]): unknown => undefined),
+  scanned: [] as Array<{ path: string; hash: string; size: number }>,
 }));
+
+const DEFAULT_SCAN = [
+  { path: "/t/projects/demo/s1.jsonl", hash: "h1", size: 1000 },
+  { path: "/t/projects/scratch/s2.jsonl", hash: "h2", size: 2000 },
+];
 
 vi.mock("../state/db.js", () => ({
   StateDb: class {
@@ -43,10 +52,7 @@ vi.mock("./writer.js", () => ({
 }));
 
 vi.mock("./scanner.js", () => ({
-  scanSessions: () => [
-    { path: "/t/projects/demo/s1.jsonl", hash: "h1", size: 1000 },
-    { path: "/t/projects/scratch/s2.jsonl", hash: "h2", size: 2000 },
-  ],
+  scanSessions: () => spies.scanned,
 }));
 
 vi.mock("./parser.js", () => ({
@@ -91,11 +97,14 @@ vi.mock("./embeddingSweep.js", () => ({
   }),
 }));
 
-function cfg(projects: Record<string, "include" | "exclude">): Config {
+function cfg(
+  projects: Record<string, "include" | "exclude">,
+  claudeProjectsDir = "/t/projects",
+): Config {
   return {
     vaultPath: "/tmp/vir-test-vault",
     outputDir: "Vir",
-    claudeProjectsDir: "/t/projects",
+    claudeProjectsDir,
     provider: "kie",
     filterThreshold: 1,
     projects,
@@ -116,6 +125,7 @@ describe("runPipeline — project filtering at the scan phase", () => {
     spies.probe.mockClear();
     spies.getByPath.mockReset();
     spies.getByPath.mockReturnValue(undefined);
+    spies.scanned = DEFAULT_SCAN;
   });
 
   it("an excluded project's session never reaches the paid boundary", async () => {
@@ -198,5 +208,39 @@ describe("runPipeline — project filtering at the scan phase", () => {
     expect(spies.distill).toHaveBeenCalledTimes(1);
     expect(skipRowsFor("project-excluded")).toHaveLength(0);
     expect(conf.projects).toEqual({ demo: "include", scratch: "include" });
+  });
+
+  it("a deleted worktree's stale project-pending row becomes eligible once the parent repo is included", async () => {
+    // Decoding walks the real filesystem, so build a real repo under a
+    // realpath'd tmp dir (macOS /var is a symlink). The worktree itself is
+    // gone — only <repo> exists; its transcript dir must still map home.
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "vir-wt-")));
+    try {
+      const repo = join(root, "myrepo");
+      mkdirSync(repo);
+      const encodedRepo = repo.replace(/[^A-Za-z0-9]/g, "-");
+      const projectsDir = join(root, "claude-projects");
+      const path = join(
+        projectsDir,
+        `${encodedRepo}--claude-worktrees-gone-fe3473`,
+        "s1.jsonl",
+      );
+      spies.scanned = [{ path, hash: "h1", size: 1000 }];
+      spies.getByPath.mockReturnValue({
+        path,
+        hash: "h1",
+        skipped: 1,
+        skip_reason: "project-pending",
+        error: null,
+        content: null,
+      });
+      await runPipeline(cfg({ myrepo: "include" }, projectsDir), {
+        quiet: true,
+      });
+      expect(spies.distill).toHaveBeenCalledTimes(1);
+      expect(skipRowsFor("project-pending")).toHaveLength(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
