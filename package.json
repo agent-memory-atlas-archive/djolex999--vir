@@ -31,11 +31,13 @@
   "files": [
     "dist",
     "assets/vir_graph_spiral.svg",
+    "assets/Vir.app",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
+    "build:notifier": "native/notifier/build.sh",
     "prepublishOnly": "npm run build && npm test",
     "dev": "tsc --watch",
     "start": "node dist/cli.js",

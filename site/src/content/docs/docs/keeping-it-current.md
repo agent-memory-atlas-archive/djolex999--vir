@@ -14,7 +14,7 @@ vir status                      # is it running, when did it last run
 
 | Platform | Mechanism | Notifications | Status |
 | --- | --- | --- | --- |
-| macOS | launchd agent (`~/Library/LaunchAgents/com.github.djolex999.vir.plist`) | osascript | Stable |
+| macOS | launchd agent (`~/Library/LaunchAgents/com.github.djolex999.vir.plist`) | Vir.app, shown as "vir" (osascript until allowed; run `vir notifications`) | Stable |
 | Linux | systemd user timer (`~/.config/systemd/user/`) | notify-send | Experimental |
 | Linux without systemd | crontab entry | notify-send | Experimental |
 
