@@ -11,7 +11,10 @@ import { basename, join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { loadConfig } from "../config.js";
-import { REJECTED_DIR, kebab } from "../pipeline/writer.js";
+import { CATEGORY_DIR, REJECTED_DIR, kebab } from "../pipeline/writer.js";
+import type { Category } from "../pipeline/types.js";
+import { StateDb } from "../state/db.js";
+import { syncRejections } from "../state/rejections.js";
 import * as ui from "../ui/display.js";
 
 // The four typed category dirs hold reviewable notes. `.rejected/`, `archived/`,
@@ -90,6 +93,31 @@ export function setFrontmatter(
   );
 }
 
+// Remove whole frontmatter lines for the given keys. Paired with
+// setFrontmatter, which appends new keys as their own lines, this is what makes
+// a restore byte-exact.
+export function removeFrontmatterKeys(
+  content: string,
+  keys: string[],
+): string {
+  const m = content.match(/^(---\n)([\s\S]*?)(\n---)/);
+  if (!m) return content;
+  const drop = new Set(keys);
+  const kept = (m[2] ?? "")
+    .split("\n")
+    .filter((line) => {
+      const idx = line.indexOf(":");
+      return idx === -1 || !drop.has(line.slice(0, idx).trim());
+    })
+    .join("\n");
+  return (
+    (m[1] ?? "---\n") +
+    kept +
+    (m[3] ?? "\n---") +
+    content.slice((m.index ?? 0) + m[0].length)
+  );
+}
+
 // Approve: stamp verified + reviewed_at. Re-reads the file each call so it also
 // captures any edits made via $EDITOR immediately before approval.
 export function approveNote(
@@ -117,6 +145,36 @@ export function rejectNote(
   const dest = join(rejectedDir, basename(filePath));
   writeFileSync(dest, updated);
   rmSync(filePath);
+  return dest;
+}
+
+// Undo one review rejection: move the note back to its category dir, drop the
+// stamp, and let its row serve again. `name` is the filename in `.rejected/`,
+// with or without `.md`. Refuses rather than overwrite a live note.
+export function restoreRejected(
+  db: StateDb,
+  vaultRoot: string,
+  name: string,
+): string {
+  const file = name.endsWith(".md") ? name : `${name}.md`;
+  const src = join(vaultRoot, REJECTED_DIR, basename(file));
+  if (!existsSync(src)) {
+    throw new Error(`no rejected note named ${file} in ${REJECTED_DIR}/`);
+  }
+  const content = readFileSync(src, "utf8");
+  const fm = parseFrontmatter(content);
+  const subDir = CATEGORY_DIR[fm.category as Category];
+  if (subDir === undefined) {
+    throw new Error(`${file} has no known category (got "${fm.category ?? ""}")`);
+  }
+  const dest = join(vaultRoot, subDir, basename(file));
+  if (existsSync(dest)) {
+    throw new Error(`${join(subDir, basename(file))} already exists — not overwriting it`);
+  }
+  mkdirSync(join(vaultRoot, subDir), { recursive: true });
+  writeFileSync(dest, removeFrontmatterKeys(content, ["rejected_at"]));
+  rmSync(src);
+  if (fm.session_id) db.clearRejected(fm.session_id);
   return dest;
 }
 
@@ -227,11 +285,33 @@ export interface ReviewCliOptions {
   all?: boolean;
   project?: string;
   limit?: string;
+  restore?: string;
 }
 
 export async function runReview(opts: ReviewCliOptions): Promise<void> {
   const cfg = loadConfig();
   const vaultRoot = join(cfg.vaultPath, cfg.outputDir);
+  const db = new StateDb();
+  try {
+    await reviewWithDb(opts, vaultRoot, db);
+  } finally {
+    db.close();
+  }
+}
+
+async function reviewWithDb(
+  opts: ReviewCliOptions,
+  vaultRoot: string,
+  db: StateDb,
+): Promise<void> {
+  if (opts.restore !== undefined) {
+    const dest = restoreRejected(db, vaultRoot, opts.restore);
+    ui.header("review");
+    ui.blank();
+    ui.row(ui.success(ui.CHECK), ui.text(`restored → ${ui.shortNotePath(dest)}`));
+    return;
+  }
+  syncRejections(db, vaultRoot);
 
   const parsedLimit = opts.limit ? Number.parseInt(opts.limit, 10) : 50;
   const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50;
@@ -308,6 +388,8 @@ export async function runReview(opts: ReviewCliOptions): Promise<void> {
         ui.row(ui.success(ui.CHECK), ui.text("edited + approved"));
       } else if (ans === "r") {
         const dest = rejectNote(n.filePath, vaultRoot);
+        const sid = parseFrontmatter(readFileSync(dest, "utf8")).session_id;
+        if (sid) db.markRejected(sid);
         rejected += 1;
         ui.row(ui.warn(ui.CROSS), ui.text(`rejected → ${ui.shortNotePath(dest)}`));
       } else if (ans === "q") {

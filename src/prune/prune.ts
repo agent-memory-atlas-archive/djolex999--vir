@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join } from "node:path";
-import { setFrontmatter } from "../cli/review.js";
+import { removeFrontmatterKeys, setFrontmatter } from "../cli/review.js";
 import type { Config } from "../config.js";
 import { acquireLock, releaseLock, LOCK_PATH } from "../pipeline/lock.js";
 import { makeSlug } from "../pipeline/slug.js";
@@ -246,27 +246,3 @@ export function restorePruned(
   }
 }
 
-// Remove whole frontmatter lines for the given keys. Paired with
-// setFrontmatter, which appends new keys as their own lines, this is what makes
-// a restore byte-exact.
-export function removeFrontmatterKeys(
-  content: string,
-  keys: string[],
-): string {
-  const m = content.match(/^(---\n)([\s\S]*?)(\n---)/);
-  if (!m) return content;
-  const drop = new Set(keys);
-  const kept = (m[2] ?? "")
-    .split("\n")
-    .filter((line) => {
-      const idx = line.indexOf(":");
-      return idx === -1 || !drop.has(line.slice(0, idx).trim());
-    })
-    .join("\n");
-  return (
-    (m[1] ?? "---\n") +
-    kept +
-    (m[3] ?? "\n---") +
-    content.slice((m.index ?? 0) + m[0].length)
-  );
-}

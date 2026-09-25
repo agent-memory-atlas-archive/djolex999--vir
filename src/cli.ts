@@ -31,7 +31,7 @@ import {
   orphanCheck,
   stalenessCheck,
 } from "./lint/linter.js";
-import { strayFileCheck } from "./lint/strayFiles.js";
+import { demoteStrays, strayFileCheck } from "./lint/strayFiles.js";
 import { runPipeline } from "./pipeline/run.js";
 import {
   categorizeTranscriptHead,
@@ -736,12 +736,17 @@ program
   )
   .option("--orphans", "Run only the orphan check (free)")
   .option("--strays", "Run only the stray-file check (free)")
+  .option(
+    "--fix",
+    "Move retitle-duplicate strays into archived/ (other strays are left alone)",
+  )
   .option("--stale", "Run only the staleness check (free)")
   .option("--contradictions", "Run only the contradiction check (Haiku tokens)")
   .action(
     runAction(async (opts: {
       orphans?: boolean;
       strays?: boolean;
+      fix?: boolean;
       stale?: boolean;
       contradictions?: boolean;
     }) => {
@@ -803,6 +808,15 @@ program
                   : ui.warn("only copy — inspect before removing");
               console.log(
                 `   ${ui.dim(ui.BULLET)} ${ui.text(ui.shortNotePath(st.relPath))}  ${ui.muted(st.kind)}  ${note}`,
+              );
+            }
+            if (opts.fix) {
+              const fixed = demoteStrays(cfg, r);
+              strayCount -= fixed.moved;
+              issues -= fixed.moved;
+              ui.row(
+                ui.success(ui.CHECK),
+                `${ui.text("strays")} ${ui.dim(`moved ${fixed.moved} to archived/, left ${fixed.left} untouched`)}`,
               );
             }
           }
@@ -1711,6 +1725,7 @@ program
   .option("--all", "Review all notes, including verified ones")
   .option("--project <slug>", "Filter by project")
   .option("--limit <n>", "Max notes to review in this session", "50")
+  .option("--restore <note>", "Move one rejected note back out of .rejected/")
   .action(runAction(runReview));
 
 program

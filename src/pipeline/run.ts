@@ -1,6 +1,8 @@
 import { notify } from "../ui/notify.js";
 import { appendFileSync } from "node:fs";
+import { join } from "node:path";
 import { DAEMON_LOG_PATH, ensureVirDir, type Config } from "../config.js";
+import { syncRejections } from "../state/rejections.js";
 import { StateDb } from "../state/db.js";
 import * as ui from "../ui/display.js";
 import {
@@ -196,6 +198,9 @@ export async function runPipeline(
   ensureVirDir();
   const db = new StateDb();
   const writer = new VaultWriter(cfg, db);
+  // A note rejected in `vir review` must stop serving this run's reads
+  // (period summaries, embeddings) even if the rejection predates rejected_at.
+  syncRejections(db, join(cfg.vaultPath, cfg.outputDir));
 
   const summary: RunSummary = {
     scanned: 0,
@@ -652,6 +657,9 @@ export async function runPipeline(
     const distillModel = distillModelId;
     const CLASSIFY_OUTPUT_TOKENS = 350;
     const DISTILL_OUTPUT_TOKENS = 4500;
+    // The retitle call reads the finished note (~540 words) plus its prompt.
+    const RETITLE_INPUT_TOKENS = 900;
+    const RETITLE_OUTPUT_TOKENS = 40;
     const CHARS_PER_TOKEN = 3;
     let totalCost = 0;
     let estimated = 0;
@@ -703,6 +711,14 @@ export async function runPipeline(
               distillModel,
               distillIn,
               DISTILL_OUTPUT_TOKENS,
+              cfg.pricing,
+              cfg.kieTopUpTier,
+            ) +
+            computeCost(
+              cfg.provider,
+              classifyModel,
+              RETITLE_INPUT_TOKENS,
+              RETITLE_OUTPUT_TOKENS,
               cfg.pricing,
               cfg.kieTopUpTier,
             );

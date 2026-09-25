@@ -41,9 +41,9 @@ import {
 } from "./composer.js";
 import { kebab, makeSlug, sessionSuffix } from "./slug.js";
 
-// Rejected notes are moved here by `vir review`, never deleted. Shared with
-// cli/review.ts so the two sides can't drift apart.
-export const REJECTED_DIR = ".rejected";
+import { REJECTED_DIR } from "./vaultDirs.js";
+
+export { REJECTED_DIR };
 
 export const CATEGORY_DIR: Record<Category, string> = {
   pattern: "patterns",
@@ -51,6 +51,24 @@ export const CATEGORY_DIR: Record<Category, string> = {
   decision: "decisions",
   tool: "tools",
 };
+
+// Drop the index.md row pointing at a path that no longer exists. Rows are
+// matched on the wikilink target, which is unique per note. `root` is the vir
+// output dir; `relPath` is relative to it.
+export function dropIndexRow(root: string, relPath: string): void {
+  const p = join(root, "index.md");
+  if (!existsSync(p)) return;
+  const marker = `[[${relPath.replace(/\.md$/, "")}|`;
+  const current = readFileSync(p, "utf8");
+  if (!current.includes(marker)) return;
+  writeFileSync(
+    p,
+    current
+      .split("\n")
+      .filter((line) => !line.includes(marker))
+      .join("\n"),
+  );
+}
 
 export class VaultWriter {
   private root: string;
@@ -123,7 +141,12 @@ export class VaultWriter {
     const themesLines =
       classification.themes.length > 0
         ? renderThemesLines(classification.themes)
-        : this.preservedThemesBlock(priorPath);
+        : this.preservedListBlock(priorPath, "themes");
+    // Same for branches: a rewrite-only pass has no transcript to read them from.
+    const branchesLines =
+      session.branches.length > 0
+        ? renderListLines("branches", session.branches)
+        : this.preservedListBlock(priorPath, "branches");
 
     // Obsidian resolves [[bare-kebab-topic]] (what wikilinkRelated emits in
     // OTHER notes' Related sections) to this note only via an alias — the
@@ -139,6 +162,7 @@ export class VaultWriter {
       `date: ${session.startedAt ?? new Date().toISOString()}`,
       `confidence: ${classification.confidence}`,
       ...themesLines,
+      ...branchesLines,
       // A user's review verdict (set by `vir review`) lives in frontmatter, not
       // SQLite — so any rewrite of the file (rewrite-only OR a --full re-distill
       // that re-emits an existing note) would clobber it. Carry it over verbatim.
@@ -247,6 +271,8 @@ export class VaultWriter {
       transcriptText: "",
       isSidechain: false,
       entrypoint: null,
+      // No transcript here; write() carries the note's existing block over.
+      branches: [],
     };
     const note: DistilledNote = {
       classification: {
@@ -573,25 +599,12 @@ export class VaultWriter {
     return this.belongsToSession(rebuilt, sessionId) ? rebuilt : null;
   }
 
-  // Drop the index.md row pointing at a path that no longer exists. Rows are
-  // matched on the wikilink target, which is unique per note.
   private dropIndexRow(relPath: string): void {
-    const p = join(this.root, "index.md");
-    if (!existsSync(p)) return;
-    const marker = `[[${relPath.replace(/\.md$/, "")}|`;
-    const current = readFileSync(p, "utf8");
-    if (!current.includes(marker)) return;
-    writeFileSync(
-      p,
-      current
-        .split("\n")
-        .filter((line) => !line.includes(marker))
-        .join("\n"),
-    );
+    dropIndexRow(this.root, relPath);
   }
 
   // The existing note's Related block, verbatim, for a rewrite that could not
-  // embed. Mirrors preservedThemesBlock: carry forward what this pass cannot
+  // embed. Mirrors preservedListBlock: carry forward what this pass cannot
   // regenerate rather than emitting an empty section that reads as a fact.
   private preservedRelatedSection(fullPath: string): string {
     if (!existsSync(fullPath)) return "";
@@ -660,12 +673,13 @@ export class VaultWriter {
     return keep.filter((k) => found.has(k)).map((k) => found.get(k)!);
   }
 
-  // Read back the multi-line `themes:` block from an existing note so a
-  // rewrite-only pass (which has no themes — it's not a DB column) preserves it
-  // instead of dropping it. Returns the `themes:` line plus its indented `- `
-  // items in order; [] when the note has no themes block. The single-line
-  // preservedReviewFields can't handle a YAML list, hence the separate walker.
-  private preservedThemesBlock(fullPath: string): string[] {
+  // Read back a multi-line YAML list (`themes:`, `branches:`) from an existing
+  // note so a rewrite-only pass, which has neither (they are not DB columns),
+  // preserves it instead of dropping it. Returns the `key:` line plus its
+  // indented `- ` items in order; [] when the note has no such block. The
+  // single-line preservedReviewFields can't handle a YAML list, hence the
+  // separate walker.
+  private preservedListBlock(fullPath: string, key: string): string[] {
     if (!existsSync(fullPath)) return [];
     let content: string;
     try {
@@ -676,12 +690,12 @@ export class VaultWriter {
     const m = content.match(/^---\n([\s\S]*?)\n---/);
     if (!m?.[1]) return [];
     const out: string[] = [];
-    let inThemes = false;
+    let inList = false;
     for (const line of m[1].split("\n")) {
-      if (!inThemes) {
-        if (/^themes:\s*$/.test(line)) {
-          inThemes = true;
-          out.push("themes:");
+      if (!inList) {
+        if (line.trimEnd() === `${key}:`) {
+          inList = true;
+          out.push(`${key}:`);
         }
         continue;
       }
@@ -689,7 +703,7 @@ export class VaultWriter {
       if (/^\s+-\s/.test(line)) out.push(line);
       else break;
     }
-    // A bare `themes:` with no items isn't worth re-emitting.
+    // A bare `key:` with no items isn't worth re-emitting.
     return out.length > 1 ? out : [];
   }
 
@@ -839,11 +853,12 @@ export { kebab, makeSlug } from "./slug.js";
 // then one quoted `- ` item per theme (quoted + escaped like topic/project, so
 // a colon or quote in a theme label can't corrupt the block). Caller guarantees
 // non-empty; an empty list omits the key entirely.
+export function renderListLines(key: string, items: string[]): string[] {
+  return [`${key}:`, ...items.map((t) => `  - "${t.replace(/"/g, '\\"')}"`)];
+}
+
 export function renderThemesLines(themes: string[]): string[] {
-  return [
-    "themes:",
-    ...themes.map((t) => `  - "${t.replace(/"/g, '\\"')}"`),
-  ];
+  return renderListLines("themes", themes);
 }
 
 const RELATED_K = 5;

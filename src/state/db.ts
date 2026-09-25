@@ -245,6 +245,14 @@ const ADDED_COLUMNS: Array<{ name: string; ddl: string }> = [
     name: "entrypoint",
     ddl: "ALTER TABLE sessions ADD COLUMN entrypoint TEXT",
   },
+  {
+    // `vir review` rejection. The review verdict used to live only in the
+    // note file's location, which SQL cannot see, so a rejected note kept
+    // serving every DB-backed read path. Same shape as pruned_at: the row
+    // keeps its content and stays processed, so a restore is exact.
+    name: "rejected_at",
+    ddl: "ALTER TABLE sessions ADD COLUMN rejected_at TEXT",
+  },
 ];
 
 // After this many consecutive failed distills, `vir run` stops retrying the
@@ -413,14 +421,48 @@ export class StateDb {
     return this.columnsOf(table).has("embedding_model");
   }
 
-  // `AND pruned_at IS NULL`, or nothing when the column does not exist yet.
-  // The read-only MCP path skips migrations, so an upgraded-but-never-written
-  // DB has no prune column — naming it unconditionally would take out every
-  // read path at once, which is exactly the class of break #19 was.
-  private prunedGate(): string {
-    return this.columnsOf("sessions").has("pruned_at")
-      ? " AND pruned_at IS NULL"
-      : "";
+  // `AND pruned_at IS NULL AND rejected_at IS NULL`, each clause only when its
+  // column exists. The read-only MCP path skips migrations, so an
+  // upgraded-but-never-written DB may lack either column — naming one
+  // unconditionally would take out every read path at once, which is exactly
+  // the class of break #19 was.
+  private servingGate(): string {
+    const cols = this.columnsOf("sessions");
+    return (
+      (cols.has("pruned_at") ? " AND pruned_at IS NULL" : "") +
+      (cols.has("rejected_at") ? " AND rejected_at IS NULL" : "")
+    );
+  }
+
+  // Rows for one session, matched on the full id in the transcript filename.
+  // Notes carry the full id in frontmatter; the 8-char filename suffix is only
+  // a hint and must never select a row. Ids are UUIDs or `agent-<hex>` (older
+  // subagent transcripts); anything outside that alphabet could smuggle a LIKE
+  // wildcard (`%`, `_`) in from a hand-edited frontmatter, so it selects nothing.
+  private sessionPathPattern(sessionId: string): string | null {
+    return /^[A-Za-z0-9-]+$/.test(sessionId) ? `%/${sessionId}.jsonl` : null;
+  }
+
+  // Stop a review-rejected session serving any read path. Keeps an earlier
+  // rejection time. Returns the number of rows marked.
+  markRejected(sessionId: string, now: string = new Date().toISOString()): number {
+    const pattern = this.sessionPathPattern(sessionId);
+    if (pattern === null) return 0;
+    return this.db
+      .prepare(
+        "UPDATE sessions SET rejected_at = ? WHERE rejected_at IS NULL AND path LIKE ?",
+      )
+      .run(now, pattern).changes;
+  }
+
+  clearRejected(sessionId: string): number {
+    const pattern = this.sessionPathPattern(sessionId);
+    if (pattern === null) return 0;
+    return this.db
+      .prepare(
+        "UPDATE sessions SET rejected_at = NULL WHERE rejected_at IS NOT NULL AND path LIKE ?",
+      )
+      .run(pattern).changes;
   }
 
   // Demote a distilled row: it stops serving every read path but keeps its
@@ -479,7 +521,7 @@ export class StateDb {
   // transcript still exists on disk — a filesystem question, so the rows come
   // back raw rather than being counted here.
   listDistillFailures(): Array<{ path: string; processed_at: string }> {
-    const gate = this.prunedGate();
+    const gate = this.servingGate();
     return this.db
       .prepare(
         `SELECT path, processed_at
@@ -604,7 +646,7 @@ export class StateDb {
         `SELECT * FROM sessions
          WHERE skipped = 0
            AND (content IS NULL OR content = ''
-                OR (error IS NOT NULL AND error != ''))${this.prunedGate()}`,
+                OR (error IS NOT NULL AND error != ''))${this.servingGate()}`,
       )
       .all() as SessionRow[];
   }
@@ -664,7 +706,7 @@ export class StateDb {
            AND embedding IS NULL
            AND topic IS NOT NULL
            AND category IS NOT NULL
-           AND COALESCE(archived, 0) = 0${this.prunedGate()}`,
+           AND COALESCE(archived, 0) = 0${this.servingGate()}`,
       )
       .all() as EmbeddingTargetRow[];
   }
@@ -776,7 +818,7 @@ export class StateDb {
            AND content IS NOT NULL
            AND category IS NOT NULL
            AND topic IS NOT NULL
-           AND COALESCE(archived, 0) = 0${this.prunedGate()}`,
+           AND COALESCE(archived, 0) = 0${this.servingGate()}`,
       )
       .all() as Array<{
       path: string;
@@ -861,7 +903,7 @@ export class StateDb {
          WHERE skipped = 0
            AND error IS NULL
            AND content IS NOT NULL
-           AND COALESCE(archived, 0) = 0${this.prunedGate()}`,
+           AND COALESCE(archived, 0) = 0${this.servingGate()}`,
             )
             .all()
         : []
@@ -984,7 +1026,7 @@ export class StateDb {
            AND embedding IS NOT NULL
            AND COALESCE(archived, 0) = 0
            AND topic IS NOT NULL
-           AND category IS NOT NULL${this.prunedGate()}`,
+           AND category IS NOT NULL${this.servingGate()}`,
       )
       .all() as Array<{
       path: string;

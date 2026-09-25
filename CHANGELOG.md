@@ -1,5 +1,94 @@
 # Changelog
 
+## 0.20.0 — 2026-09-25
+
+**A note rejected in `vir review` stops being served.** Review rejected by
+moving the file into `.rejected/`, and SQL cannot see where a file is. The
+row kept serving every read path built on the database: `listDistilled`
+(and so `sync-claude`, summaries, `vir_recent_notes`, dedupe and lint),
+`getStats` and `vir status`, and the embedding sweep. It dropped out of
+search only by accident, because the moved file read as empty content.
+
+- **`rejected_at` on the sessions row**, the same shape as `pruned_at`.
+  The row keeps its content and stays processed, so nothing is re-distilled
+  or re-billed. Every serving query now carries one gate for both states
+  (`servingGate()`). Each clause is only added when its column exists, so
+  the read-only MCP server works on a database that hasn't been migrated.
+- **Backfilled from the files.** `vir run` and `vir review` sync every
+  note in `.rejected/` that carries a `rejected_at` stamp into the
+  database. Notes `vir prune` moved there carry no such stamp and keep
+  their own state.
+- **Rows are matched on the full session id**, never the 8-character
+  filename suffix. Ids are UUIDs or `agent-<hex>`, which 785 rows in the
+  reference DB use; anything outside that alphabet selects nothing, so a
+  hand-edited frontmatter can't slip a `LIKE` wildcard in.
+- **`vir review --restore <note>`** moves one rejected note back, removes
+  its stamp and puts its row back on every read path. It refuses to
+  overwrite a note already at the destination.
+- **Reference vault:** a 2026-09-25 audit rejected 116 notes. `vir status`
+  still counted 296 notes against 180 files. After the sync it counts 180.
+
+**Notes record which git branches their session ran on.** Each line of a
+Claude Code transcript carries `gitBranch`. The parser now collects them in
+first-seen order and the writer emits a `branches:` list in frontmatter.
+Detached `HEAD` is skipped, and the key is left out when the transcript has
+none.
+
+- **Why now, with nothing reading it yet.** A 2026-09-25 vault audit found
+  notes describing work that never left its branch as if it were live (4
+  of 25 on the current prompt). Whether a branch merged can only be known
+  later, and 69% of 291 recent sessions ran off `main`, so writing "on
+  branch X" into the note would be wrong most of the time within a week.
+  A later check can compare this field against the repo. The field has to
+  be captured now: Claude Code deletes transcripts after about 30 days, and
+  what isn't recorded then can't be backfilled.
+- **`--rewrite-only` keeps the block.** A rewrite has no transcript, so it
+  carries the existing `branches:` list over, the same way it keeps
+  `themes:`.
+- **No LLM change.** The distill prompt, classify and cost are unchanged.
+
+**A note is titled from the note.** The topic, which becomes the filename,
+the alias and the title shown in every retrieval result, used to come from
+classify. Classify reads the session's raw summary before the note exists,
+and on the 09-18 prompt 10 of 25 titles no longer matched the note they
+headed: `offline-backup-in-separate-database` on a note about trademark
+research, `authentic-storytelling-beats-polished-copy` on an idle-shortcut
+bug. A cheap classify-model call now names the finished note, and its title
+replaces classify's.
+
+- **Blind-judged before shipping.** An Opus judge, shown only the note body
+  and the two titles in random order, preferred the new title on 23 of 25
+  current-prompt notes, and on 7 of the 8 the vault audit had flagged. A
+  variant that added "in English" and "name the specific thing" tied it
+  13-12 and drifted onto side bullets, so it was not kept.
+- **A failed naming call never costs the note.** The distill has already
+  been paid for, so an unusable reply or a failed call keeps classify's
+  topic, with a warning. A subscription limit still propagates, so the run
+  loop halts on it as before.
+- **Cost:** one classify-model call per distilled note, about 900 tokens in
+  and 40 out. It is logged as stage `retitle` in `cost.log` and included in
+  the `vir run --dry-run` estimate. Classify still decides the category,
+  project and confidence, and the eval harness, which calls classify and
+  distill directly, is unaffected.
+
+**`vir lint --strays --fix`.** The stray check can now clean up what it
+finds. It moves `retitle-duplicate` strays into `archived/` and drops
+their `index.md` rows. Retrieval already skips that directory, and a move
+can be undone by hand.
+
+- **Only retitle duplicates move.** They are the one kind where a live
+  sibling proves nothing unique is lost. An `unknown` stray may be the only
+  copy of its text. A pruned leftover belongs to prune's `.rejected/`
+  bookkeeping, which `--restore` reads by exact name. Both are reported and
+  left where they are.
+- **It holds the pipeline lock.** A concurrent `vir run` may be rewriting
+  the same session's note, so `--fix` refuses to run while the lock is held.
+- **It never overwrites.** A basename already in `archived/` (from dedupe
+  or an earlier demotion) gets a `-1` suffix instead.
+- **Reference vault:** 32 strays moved, 0 left. They were about a tenth of
+  the 337 live notes a 2026-09-25 audit graded, and they are the source of
+  its "one session split into several notes" finding.
+
 ## 0.19.0 — 2026-09-25
 
 **macOS notifications come from vir, not Script Editor.**

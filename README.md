@@ -368,7 +368,9 @@ with your distro, init system, and Node version.
 | `vir lint`                  | cheap | Find orphans, stale notes, contradictions |
 | `vir dedupe`                | cheap | Interactive duplicate detection + merge   |
 | `vir review`                | free  | Walk new notes: approve/edit/reject       |
+| `vir review --restore <note>` | free | Put one rejected note back            |
 | `vir lint --strays`         | free  | Note files with no live DB row (retitle debris) |
+| `vir lint --strays --fix`   | free  | Move retitle debris to `archived/` (only when a live copy exists) |
 | `vir prune`                 | free  | Dry run: agent-derived notes to demote    |
 | `vir prune --apply`         | free  | Demote them to `.rejected/` (never deletes) |
 | `vir prune --restore`       | free  | Put every pruned note back, exactly       |
@@ -515,8 +517,8 @@ improvements. Delete it any time; disable it with `"logQueries": false` in
 
 |                |                                           |
 | -------------- | ----------------------------------------- |
-| Version        | 0.19.0                                    |
-| Tests          | 783 passing                               |
+| Version        | 0.20.0                                    |
+| Tests          | 807 passing                               |
 | Platforms      | macOS (launchd), Linux (systemd/cron)     |
 | Node           | 20+                                       |
 | First-run cost | $1 to $5 (Kie.ai optional, ~72% cheaper)  |
