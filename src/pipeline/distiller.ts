@@ -450,6 +450,41 @@ Session:
 ${scrubbedContent}`;
 }
 
+// Classify names the session from its raw summary, before the note exists, and
+// on the 09-18 prompt 10 of 25 titles no longer matched the note they headed.
+// Naming the finished note instead won a blind judge 23-2 on those 25
+// (2026-09-25 vault audit). A variant adding "in English" and "name the
+// specific thing" tied this text 13-12 and drifted onto side bullets, so it was
+// not kept. Pure, so the text has one home.
+export function buildTitlePrompt(markdown: string): string {
+  return `Name this note. Output the title only: 2-5 words, kebab-friendly, no quotes.
+
+The title names the note's single most important claim — normally what the
+Summary's second sentence states — so a reader who sees only the title knows
+what the note is about. Not a summary of everything it covers, and not a
+slogan.
+
+Note:
+${markdown}`;
+}
+
+// A title is a short phrase. Anything else (an empty reply, a sentence, a
+// refusal) is unusable and the caller keeps classify's topic.
+const MAX_TITLE_WORDS = 8;
+const MAX_TITLE_CHARS = 80;
+
+export function parseTitle(text: string): string | null {
+  const first = text.trim().split("\n")[0] ?? "";
+  const title = first
+    .replace(/^#+\s*/, "")
+    .replace(/^title:\s*/i, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .trim();
+  if (title.length === 0 || title.length > MAX_TITLE_CHARS) return null;
+  if (title.split(/[\s-]+/).length > MAX_TITLE_WORDS) return null;
+  return title;
+}
+
 export class Distiller {
   private client: Anthropic | null;
   private cfg: Config;
@@ -549,6 +584,47 @@ ${scrubbedSummary}`;
     return text.trim();
   }
 
+  // One cheap classify-model call over the finished note. Null means the reply
+  // was not a usable title.
+  async retitle(
+    session: ParsedSession,
+    markdown: string,
+    cls: Classification,
+  ): Promise<string | null> {
+    const text = await withRateLimitRetry(() =>
+      callLLM(this.cfg, this.client, {
+        prompt: buildTitlePrompt(markdown),
+        model: this.classifyModel,
+        maxTokens: 40,
+        cost: {
+          session: session.sessionId,
+          project: cls.project,
+          stage: "retitle",
+        },
+      }),
+    );
+    return parseTitle(text);
+  }
+
+  // The distill has already been paid for, so a failed naming call keeps
+  // classify's topic rather than discarding the note. A subscription limit is
+  // the exception: the run loop has to see it and halt.
+  private async titleFor(
+    session: ParsedSession,
+    markdown: string,
+    cls: Classification,
+  ): Promise<string> {
+    try {
+      return (await this.retitle(session, markdown, cls)) ?? cls.topic;
+    } catch (err) {
+      if (err instanceof ClaudeCliLimitError) throw err;
+      console.warn(
+        `[vir] retitle failed for ${session.sessionId.slice(0, 8)}, keeping classify topic: ${(err as Error).message}`,
+      );
+      return cls.topic;
+    }
+  }
+
   async run(
     session: ParsedSession,
     scrubbedSummary: string,
@@ -561,7 +637,8 @@ ${scrubbedSummary}`;
     // input. The chosen model flows into callLLM and lands in cost.log.
     const model = this.modelFor(cls, estimateTokens(scrubbedContent));
     const md = await this.distill(session, scrubbedContent, cls, model);
-    return { classification: cls, markdown: md };
+    const topic = await this.titleFor(session, md, cls);
+    return { classification: { ...cls, topic }, markdown: md };
   }
 }
 

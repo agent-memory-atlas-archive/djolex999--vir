@@ -652,6 +652,9 @@ export async function runPipeline(
     const distillModel = distillModelId;
     const CLASSIFY_OUTPUT_TOKENS = 350;
     const DISTILL_OUTPUT_TOKENS = 4500;
+    // The retitle call reads the finished note (~540 words) plus its prompt.
+    const RETITLE_INPUT_TOKENS = 900;
+    const RETITLE_OUTPUT_TOKENS = 40;
     const CHARS_PER_TOKEN = 3;
     let totalCost = 0;
     let estimated = 0;
@@ -703,6 +706,14 @@ export async function runPipeline(
               distillModel,
               distillIn,
               DISTILL_OUTPUT_TOKENS,
+              cfg.pricing,
+              cfg.kieTopUpTier,
+            ) +
+            computeCost(
+              cfg.provider,
+              classifyModel,
+              RETITLE_INPUT_TOKENS,
+              RETITLE_OUTPUT_TOKENS,
               cfg.pricing,
               cfg.kieTopUpTier,
             );

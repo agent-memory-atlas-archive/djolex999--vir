@@ -7,9 +7,11 @@ import {
   KieTimeoutError,
   kieResponseError,
   maybeAnthropicClient,
+  buildTitlePrompt,
   ClassifyParseError,
   Distiller,
   parseClassification,
+  parseTitle,
   selectDistillModel,
 } from "./distiller.js";
 import { ClaudeCliError, ClaudeCliLimitError } from "./claudeCli.js";
@@ -339,5 +341,100 @@ describe("unparseable classify responses are transient, not a verdict", () => {
       themes: [],
     });
     await expect(d.run(session, "", "")).resolves.toBeNull();
+  });
+});
+
+describe("the note is titled from the finished note, not from classify", () => {
+  const cfg = {
+    provider: "claude-cli",
+    models: { classify: "claude-haiku-4-5-20251001", distill: "claude-sonnet-4-6" },
+  } as unknown as Config;
+
+  const session = {
+    sessionId: "abc12345",
+    projectSlug: "demo",
+    rawSummary: "",
+  } as unknown as Parameters<Distiller["run"]>[0];
+
+  const cls: Classification = {
+    category: "gotcha",
+    topic: "classify guessed this",
+    project: "demo",
+    confidence: 0.9,
+    themes: ["a", "b"],
+  };
+
+  class StubDistiller extends Distiller {
+    constructor(private readonly title: () => Promise<string | null>) {
+      super(cfg);
+    }
+    override async classify(): Promise<Classification> {
+      return cls;
+    }
+    override async distill(): Promise<string> {
+      return "## Summary\n\nBody.";
+    }
+    override async retitle(): Promise<string | null> {
+      return this.title();
+    }
+  }
+
+  it("uses the retitle as the topic and keeps everything else from classify", async () => {
+    const d = new StubDistiller(async () => "jezgro-trademark-cleared");
+    const note = await d.run(session, "", "");
+    expect(note?.classification).toEqual({ ...cls, topic: "jezgro-trademark-cleared" });
+  });
+
+  it("keeps the classify topic when the title response is unusable", async () => {
+    const d = new StubDistiller(async () => null);
+    expect((await d.run(session, "", ""))?.classification.topic).toBe(
+      "classify guessed this",
+    );
+  });
+
+  // The distill already ran and cost money; a failed naming call must not
+  // throw that note away and re-bill the whole session on the next run.
+  it("keeps the classify topic when the title call fails", async () => {
+    const d = new StubDistiller(async () => {
+      throw new ClaudeCliError("boom", 1, 500);
+    });
+    expect((await d.run(session, "", ""))?.classification.topic).toBe(
+      "classify guessed this",
+    );
+  });
+
+  // A limit is a wall the run loop must see and halt on, not a naming glitch.
+  it("lets a subscription limit through", async () => {
+    const d = new StubDistiller(async () => {
+      throw new ClaudeCliLimitError("session", null);
+    });
+    await expect(d.run(session, "", "")).rejects.toThrow(ClaudeCliLimitError);
+  });
+
+  it("parseTitle takes the first line and strips wrappers", () => {
+    expect(parseTitle('"debug-builds-block-background-work"\n')).toBe(
+      "debug-builds-block-background-work",
+    );
+    expect(parseTitle("Title: `registry-not-append-only`")).toBe(
+      "registry-not-append-only",
+    );
+    expect(parseTitle("# stale max tokens documentation\nbecause...")).toBe(
+      "stale max tokens documentation",
+    );
+  });
+
+  it("parseTitle rejects an empty answer or a sentence instead of a title", () => {
+    expect(parseTitle("   \n")).toBeNull();
+    expect(
+      parseTitle(
+        "This note is about the way the registry tables are written with bare put calls",
+      ),
+    ).toBeNull();
+  });
+
+  it("the title prompt carries the note body", () => {
+    const p = buildTitlePrompt("## Summary\n\nJEZGRO cleared the trademark search.");
+    expect(p).toContain("JEZGRO cleared the trademark search.");
+    expect(p).toContain("single most important claim");
   });
 });
