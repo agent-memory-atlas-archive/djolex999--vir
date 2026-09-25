@@ -671,7 +671,7 @@ export async function runPipeline(
       if (!opts.full && db.isProcessed(found.path, found.hash)) continue;
       let parsed: ParsedSession;
       try {
-        parsed = parseSession(found.path, found.hash);
+        parsed = parseSession(found.path, found.hash, projectOf.get(found.path));
       } catch {
         continue;
       }
@@ -890,7 +890,7 @@ export async function runPipeline(
         continue;
       }
 
-      const parsed = parseSession(found.path, found.hash);
+      const parsed = parseSession(found.path, found.hash, projectOf.get(found.path));
 
       // Parser backstop for the transcript-category filter: a sidechain by
       // CONTENT (isSidechain in the JSONL) that structural detection missed

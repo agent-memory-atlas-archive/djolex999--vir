@@ -10,6 +10,7 @@ import { ClaudeCliLimitError } from "../pipeline/claudeCli.js";
 import { scoreSession } from "../pipeline/filter.js";
 import { acquireLock, LockHeldError, releaseLock } from "../pipeline/lock.js";
 import { parseSession } from "../pipeline/parser.js";
+import { projectNameFor } from "../pipeline/projects.js";
 import { scrub } from "../pipeline/scrubber.js";
 import { filterToolCalls } from "../pipeline/toolCallFilter.js";
 import { VaultWriter } from "../pipeline/writer.js";
@@ -286,7 +287,11 @@ export async function runReconcile(
       // are cached but we know their stored content is empty, so we want a
       // forced retry. Parse, score, distill, then update the row in place.
       try {
-        const parsed = parseSession(t.path, t.hash);
+        const parsed = parseSession(
+          t.path,
+          t.hash,
+          projectNameFor(t.path, cfg.claudeProjectsDir),
+        );
         const score = scoreSession(parsed, cfg.filterThreshold);
         if (!score.passes) {
           // The filter rejects this now — record as skipped so a future
