@@ -23,6 +23,7 @@ import {
 } from "./config.js";
 import { applyPlan, planUpdates, type PlanItem } from "./claude/updater.js";
 import { pruneCommand } from "./cli/pruneAction.js";
+import { setupNotifications } from "./cli/notificationsSetup.js";
 import { detectDuplicates } from "./dedupe/detector.js";
 import { mergeNotes } from "./dedupe/merger.js";
 import {
@@ -1737,6 +1738,15 @@ program
     }),
   );
 
+program
+  .command("notifications")
+  .description("Allow vir's desktop notifications (macOS) and send a test one")
+  .action(
+    runAction(async () => {
+      setupNotifications({ test: true });
+    }),
+  );
+
 const mcpCmd = program
   .command("mcp")
   .description("MCP server + Claude Code registration")
@@ -2314,6 +2324,11 @@ async function cmdInit(): Promise<void> {
   });
   if (wantsMcp) {
     await installToClaudeCode("user");
+  }
+
+  if (process.platform === "darwin" && parsed.data.notifications) {
+    ui.blank();
+    setupNotifications({ test: false });
   }
 
   ui.blank();

@@ -325,12 +325,18 @@ every session exactly as before.
 
 ## Platform support
 
-| Platform        | Daemon             | Notifications | Status       |
-| --------------- | ------------------ | ------------- | ------------ |
-| macOS           | launchd            | osascript     | Stable       |
-| Linux (systemd) | systemd user timer | notify-send   | Experimental |
-| Linux (cron)    | crontab            | notify-send   | Experimental |
-| Windows         | Not supported      | none          | Planned      |
+| Platform        | Daemon             | Notifications                 | Status       |
+| --------------- | ------------------ | ----------------------------- | ------------ |
+| macOS           | launchd            | Vir.app (osascript fallback)  | Stable       |
+| Linux (systemd) | systemd user timer | notify-send                   | Experimental |
+| Linux (cron)    | crontab            | notify-send                   | Experimental |
+| Windows         | Not supported      | none                          | Planned      |
+
+On macOS, notifications come from a small bundled helper, so they show as
+**vir** with the vir icon rather than "Script Editor". macOS asks once
+whether to allow them. `vir init` triggers that prompt, and so does
+`vir notifications` at any time. Until you allow them, vir falls back to
+osascript.
 
 Linux support is **experimental and untested**. `vir schedule install`
 prefers a systemd user timer and falls back to a crontab entry when systemd
@@ -372,6 +378,7 @@ with your distro, init system, and Node version.
 | `vir schedule install`      | free  | Register the background daemon            |
 | `vir status`                | free  | Knowledge base breakdown + daemon status  |
 | `vir doctor`                | cheap | 15 install/config checks                  |
+| `vir notifications`         | free  | Allow vir's macOS notifications + send a test |
 | `vir reconcile`             | $$    | Retry sessions that failed, cache-bypassed |
 | `vir mcp install`           | free  | Register the MCP server with Claude Code  |
 

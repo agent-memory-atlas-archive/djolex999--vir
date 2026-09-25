@@ -5,6 +5,7 @@ import {
   daemonCheck,
   embeddingProviderCheck,
   claudeCliLimitPatternCheck,
+  notificationsCheck,
   ollamaCheck,
   pendingProjectsCheck,
   queryLogCheck,
@@ -331,5 +332,29 @@ describe("prunedNotesCheck", () => {
     expect(r?.detail).toContain("sidechain-transcript 132");
     expect(r?.detail).toContain("workflow-transcript 3");
     expect(r?.detail).toContain("vir prune --restore");
+  });
+});
+
+// notify() falls back to osascript whenever Vir.app can't post, so none of
+// these states break notifications; they only say which banner you'll get.
+describe("notificationsCheck", () => {
+  it("allowed → ok", () => {
+    expect(notificationsCheck("allowed").status).toBe("ok");
+  });
+
+  it("undetermined → warn, pointing at vir notifications", () => {
+    const r = notificationsCheck("undetermined");
+    expect(r.status).toBe("warn");
+    expect(r.detail).toContain("vir notifications");
+  });
+
+  it("denied → warn, pointing at System Settings", () => {
+    const r = notificationsCheck("denied");
+    expect(r.status).toBe("warn");
+    expect(r.detail).toContain("System Settings");
+  });
+
+  it("helper unavailable → warn, never fail", () => {
+    expect(notificationsCheck(null).status).toBe("warn");
   });
 });
