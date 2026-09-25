@@ -52,6 +52,24 @@ export const CATEGORY_DIR: Record<Category, string> = {
   tool: "tools",
 };
 
+// Drop the index.md row pointing at a path that no longer exists. Rows are
+// matched on the wikilink target, which is unique per note. `root` is the vir
+// output dir; `relPath` is relative to it.
+export function dropIndexRow(root: string, relPath: string): void {
+  const p = join(root, "index.md");
+  if (!existsSync(p)) return;
+  const marker = `[[${relPath.replace(/\.md$/, "")}|`;
+  const current = readFileSync(p, "utf8");
+  if (!current.includes(marker)) return;
+  writeFileSync(
+    p,
+    current
+      .split("\n")
+      .filter((line) => !line.includes(marker))
+      .join("\n"),
+  );
+}
+
 export class VaultWriter {
   private root: string;
   private db: StateDb | null;
@@ -535,21 +553,8 @@ export class VaultWriter {
     return this.belongsToSession(rebuilt, sessionId) ? rebuilt : null;
   }
 
-  // Drop the index.md row pointing at a path that no longer exists. Rows are
-  // matched on the wikilink target, which is unique per note.
   private dropIndexRow(relPath: string): void {
-    const p = join(this.root, "index.md");
-    if (!existsSync(p)) return;
-    const marker = `[[${relPath.replace(/\.md$/, "")}|`;
-    const current = readFileSync(p, "utf8");
-    if (!current.includes(marker)) return;
-    writeFileSync(
-      p,
-      current
-        .split("\n")
-        .filter((line) => !line.includes(marker))
-        .join("\n"),
-    );
+    dropIndexRow(this.root, relPath);
   }
 
   // The existing note's Related block, verbatim, for a rewrite that could not
