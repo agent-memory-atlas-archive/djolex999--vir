@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+**A note is titled from the note.** The topic, which becomes the filename,
+the alias and the title shown in every retrieval result, used to come from
+classify. Classify reads the session's raw summary before the note exists,
+and on the 09-18 prompt 10 of 25 titles no longer matched the note they
+headed: `offline-backup-in-separate-database` on a note about trademark
+research, `authentic-storytelling-beats-polished-copy` on an idle-shortcut
+bug. A cheap classify-model call now names the finished note, and its title
+replaces classify's.
+
+- **Blind-judged before shipping.** An Opus judge, shown only the note body
+  and the two titles in random order, preferred the new title on 23 of 25
+  current-prompt notes, and on 7 of the 8 the vault audit had flagged. A
+  variant that added "in English" and "name the specific thing" tied it
+  13-12 and drifted onto side bullets, so it was not kept.
+- **A failed naming call never costs the note.** The distill has already
+  been paid for, so an unusable reply or a failed call keeps classify's
+  topic, with a warning. A subscription limit still propagates, so the run
+  loop halts on it as before.
+- **Cost:** one classify-model call per distilled note, about 900 tokens in
+  and 40 out. It is logged as stage `retitle` in `cost.log` and included in
+  the `vir run --dry-run` estimate. Classify still decides the category,
+  project and confidence, and the eval harness, which calls classify and
+  distill directly, is unaffected.
+
 **`vir lint --strays --fix`.** The stray check can now clean up what it
 finds. It moves `retitle-duplicate` strays into `archived/` and drops
 their `index.md` rows. Retrieval already skips that directory, and a move
