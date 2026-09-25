@@ -841,6 +841,27 @@ export class StateDb {
     }));
   }
 
+  // Every non-archived row's stored content, pruned and rejected included: a
+  // content migration must reach rows that are not rendered today, or a later
+  // restore renders the unmigrated text. `serving` is true where listDistilled
+  // would return the row's state.
+  listStoredContent(): Array<{ path: string; content: string; serving: boolean }> {
+    const rows = this.db
+      .prepare(
+        `SELECT path, content,
+                CASE WHEN 1 = 1${this.servingGate()} THEN 1 ELSE 0 END AS serving
+         FROM sessions
+         WHERE content IS NOT NULL
+           AND COALESCE(archived, 0) = 0`,
+      )
+      .all() as Array<{ path: string; content: string; serving: number }>;
+    return rows.map((r) => ({
+      path: r.path,
+      content: r.content,
+      serving: r.serving === 1,
+    }));
+  }
+
   stats(): {
     total: number;
     skipped: number;
