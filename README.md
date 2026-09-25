@@ -363,6 +363,7 @@ with your distro, init system, and Node version.
 | `vir dedupe`                | cheap | Interactive duplicate detection + merge   |
 | `vir review`                | free  | Walk new notes: approve/edit/reject       |
 | `vir lint --strays`         | free  | Note files with no live DB row (retitle debris) |
+| `vir lint --strays --fix`   | free  | Move retitle debris to `archived/` (only when a live copy exists) |
 | `vir prune`                 | free  | Dry run: agent-derived notes to demote    |
 | `vir prune --apply`         | free  | Demote them to `.rejected/` (never deletes) |
 | `vir prune --restore`       | free  | Put every pruned note back, exactly       |
