@@ -18,6 +18,7 @@ const session: ParsedSession = {
   rawSummary: "",
   transcriptText: "",
   isSidechain: false,
+  branches: [],
   entrypoint: null,
 };
 const cls: Classification = {

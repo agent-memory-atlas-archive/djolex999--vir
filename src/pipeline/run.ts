@@ -1514,6 +1514,8 @@ async function rewriteOne(
     transcriptText: "",
     isSidechain: false,
     entrypoint: null,
+    // No transcript here; the writer carries the note's existing block over.
+    branches: [],
   };
   const note: DistilledNote = {
     classification: {

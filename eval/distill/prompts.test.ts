@@ -10,7 +10,7 @@ const session = {
   path: "/x/abc.jsonl", hash: "h", sessionId: "abc", projectSlug: "p",
   startedAt: "2026-01-02T03:04:05.000Z", endedAt: null, lineCount: 0, toolCallCount: 0,
   filesTouched: [], assistantText: "", userText: "", rawSummary: "", transcriptText: "",
-  isSidechain: false, entrypoint: null,
+  isSidechain: false, entrypoint: null, branches: [],
 } satisfies ParsedSession;
 const cls: Classification = { category: "gotcha", topic: "t", project: "vir", confidence: 0.9, themes: [] };
 

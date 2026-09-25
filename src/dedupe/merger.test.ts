@@ -51,6 +51,7 @@ function makeSession(sessionId: string): ParsedSession {
     userText: "",
     rawSummary: "",
     transcriptText: "",
+    branches: [],
   };
 }
 
