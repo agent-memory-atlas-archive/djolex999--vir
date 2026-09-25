@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.20.0 — 2026-09-25
 
 **A note rejected in `vir review` stops being served.** Review rejected by
 moving the file into `.rejected/`, and SQL cannot see where a file is. The
