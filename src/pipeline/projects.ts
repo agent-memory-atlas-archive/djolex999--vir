@@ -56,6 +56,9 @@ function resolveEncoded(
   return null;
 }
 
+// "/.claude/worktrees/" under the dash encoding.
+const WORKTREE_MARKER = "--claude-worktrees-";
+
 // Decode a transcript directory name ("-Users-me-projects-my-app") to its
 // project name ("my-app") by resolving the encoded absolute path against
 // directories that actually exist on disk, longest match wins. Falls back to
@@ -71,6 +74,15 @@ export function decodeProjectName(
       ? basename(dirName)
       : dirName;
   if (!name.startsWith("-")) return name;
+  // A Claude Code worktree (<repo>/.claude/worktrees/<name>) belongs to its
+  // parent repo's project and inherits that decision. Resolve only the
+  // prefix, so a since-deleted worktree still maps home; if the parent
+  // doesn't resolve either, fall through to the plain decode.
+  const wt = name.indexOf(WORKTREE_MARKER);
+  if (wt > 0) {
+    const parent = resolveEncoded("/", name.slice(1, wt), readDir);
+    if (parent !== null) return parent;
+  }
   const leaf = resolveEncoded("/", name.slice(1), readDir);
   return leaf ?? name;
 }
