@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+**`vir lint --strays --fix`.** The stray check can now clean up what it
+finds. It moves `retitle-duplicate` strays into `archived/` and drops
+their `index.md` rows. Retrieval already skips that directory, and a move
+can be undone by hand.
+
+- **Only retitle duplicates move.** They are the one kind where a live
+  sibling proves nothing unique is lost. An `unknown` stray may be the only
+  copy of its text. A pruned leftover belongs to prune's `.rejected/`
+  bookkeeping, which `--restore` reads by exact name. Both are reported and
+  left where they are.
+- **It holds the pipeline lock.** A concurrent `vir run` may be rewriting
+  the same session's note, so `--fix` refuses to run while the lock is held.
+- **It never overwrites.** A basename already in `archived/` (from dedupe
+  or an earlier demotion) gets a `-1` suffix instead.
+- **Reference vault:** 32 strays moved, 0 left. They were about a tenth of
+  the 337 live notes a 2026-09-25 audit graded, and they are the source of
+  its "one session split into several notes" finding.
+
 ## 0.19.0 — 2026-09-25
 
 **macOS notifications come from vir, not Script Editor.**
