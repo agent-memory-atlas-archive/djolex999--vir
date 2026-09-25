@@ -41,9 +41,9 @@ import {
 } from "./composer.js";
 import { kebab, makeSlug, sessionSuffix } from "./slug.js";
 
-// Rejected notes are moved here by `vir review`, never deleted. Shared with
-// cli/review.ts so the two sides can't drift apart.
-export const REJECTED_DIR = ".rejected";
+import { REJECTED_DIR } from "./vaultDirs.js";
+
+export { REJECTED_DIR };
 
 export const CATEGORY_DIR: Record<Category, string> = {
   pattern: "patterns",

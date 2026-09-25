@@ -9,13 +9,16 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { StateDb } from "../state/db.js";
 import {
   approveNote,
   collectNotes,
   parseFrontmatter,
   rejectNote,
+  restoreRejected,
   setFrontmatter,
 } from "./review.js";
+import { syncRejections } from "../state/rejections.js";
 
 // Build a note file body matching the writer's frontmatter shape. `extra`
 // lets a test add review fields (verified, reviewed_at) inline.
@@ -186,5 +189,104 @@ describe("collectNotes filtering", () => {
 
     const limited = collectNotes(vault, { limit: 1 });
     expect(limited.length).toBe(1);
+  });
+});
+
+describe("rejections reach the database", () => {
+  const SID = "abc12345-0000-4000-8000-000000000001";
+  let root: string;
+  let vault: string;
+  let db: StateDb;
+
+  const seedRow = (sessionId: string): void => {
+    db.record({
+      path: `/p/-home-u-app/${sessionId}.jsonl`,
+      hash: "h",
+      skipped: false,
+      notePaths: [],
+      content: "body",
+      category: "pattern",
+      topic: "test topic",
+      project: "demo",
+      confidence: 0.9,
+      startedAt: "2026-05-01T00:00:00.000Z",
+    });
+  };
+  const writeRejected = (name: string, content: string): void => {
+    mkdirSync(join(vault, ".rejected"), { recursive: true });
+    writeFileSync(join(vault, ".rejected", name), content);
+  };
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "vir-review-db-"));
+    vault = join(root, "vir");
+    mkdirSync(vault, { recursive: true });
+    db = new StateDb(join(root, "vir.db"));
+  });
+  afterEach(() => {
+    db.close();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  // The backfill: every note rejected before rejected_at existed (and any file
+  // moved by rejectNote since) is found by its stamp and its full session id.
+  it("syncRejections marks the row of every stamped note in .rejected/", () => {
+    seedRow(SID);
+    writeRejected(
+      "test-topic-abc12345.md",
+      noteContent({ sessionId: SID, extra: ["rejected_at: 2026-09-25T00:00:00.000Z"] }),
+    );
+
+    expect(syncRejections(db, vault)).toBe(1);
+    expect(db.listDistilled()).toHaveLength(0);
+    expect(syncRejections(db, vault)).toBe(0);
+  });
+
+  // `vir prune` also moves notes into .rejected/, but it owns its own state
+  // (pruned_at) and restore. A file without the review stamp is not ours.
+  it("ignores a pruned note that carries no rejected_at", () => {
+    seedRow(SID);
+    writeRejected(
+      "test-topic-abc12345.md",
+      noteContent({ sessionId: SID, extra: ["pruned_at: 2026-09-11T00:00:00.000Z"] }),
+    );
+
+    expect(syncRejections(db, vault)).toBe(0);
+    expect(db.listDistilled()).toHaveLength(1);
+  });
+
+  it("restoreRejected moves the note back, unstamps it and clears the row", () => {
+    seedRow(SID);
+    writeRejected(
+      "test-topic-abc12345.md",
+      noteContent({ sessionId: SID, extra: ["rejected_at: 2026-09-25T00:00:00.000Z"] }),
+    );
+    syncRejections(db, vault);
+
+    const dest = restoreRejected(db, vault, "test-topic-abc12345");
+
+    expect(dest).toBe(join(vault, "patterns", "test-topic-abc12345.md"));
+    expect(existsSync(join(vault, ".rejected", "test-topic-abc12345.md"))).toBe(false);
+    expect(readFileSync(dest, "utf8")).not.toContain("rejected_at");
+    expect(db.listDistilled()).toHaveLength(1);
+  });
+
+  it("restoreRejected refuses to overwrite a note already at the destination", () => {
+    seedRow(SID);
+    writeRejected(
+      "test-topic-abc12345.md",
+      noteContent({ sessionId: SID, extra: ["rejected_at: 2026-09-25T00:00:00.000Z"] }),
+    );
+    mkdirSync(join(vault, "patterns"), { recursive: true });
+    writeFileSync(join(vault, "patterns", "test-topic-abc12345.md"), "live\n");
+
+    expect(() => restoreRejected(db, vault, "test-topic-abc12345.md")).toThrow(
+      /already exists/,
+    );
+    expect(existsSync(join(vault, ".rejected", "test-topic-abc12345.md"))).toBe(true);
+  });
+
+  it("restoreRejected names the missing note instead of guessing", () => {
+    expect(() => restoreRejected(db, vault, "nope")).toThrow(/nope/);
   });
 });

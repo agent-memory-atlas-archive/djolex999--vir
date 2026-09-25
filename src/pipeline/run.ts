@@ -1,6 +1,8 @@
 import { notify } from "../ui/notify.js";
 import { appendFileSync } from "node:fs";
+import { join } from "node:path";
 import { DAEMON_LOG_PATH, ensureVirDir, type Config } from "../config.js";
+import { syncRejections } from "../state/rejections.js";
 import { StateDb } from "../state/db.js";
 import * as ui from "../ui/display.js";
 import {
@@ -196,6 +198,9 @@ export async function runPipeline(
   ensureVirDir();
   const db = new StateDb();
   const writer = new VaultWriter(cfg, db);
+  // A note rejected in `vir review` must stop serving this run's reads
+  // (period summaries, embeddings) even if the rejection predates rejected_at.
+  syncRejections(db, join(cfg.vaultPath, cfg.outputDir));
 
   const summary: RunSummary = {
     scanned: 0,
