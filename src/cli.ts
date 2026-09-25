@@ -31,6 +31,10 @@ import {
   orphanCheck,
   stalenessCheck,
 } from "./lint/linter.js";
+import {
+  legacyRelatedCheck,
+  migrateLegacyRelated,
+} from "./lint/legacyRelated.js";
 import { demoteStrays, strayFileCheck } from "./lint/strayFiles.js";
 import { runPipeline } from "./pipeline/run.js";
 import {
@@ -732,13 +736,17 @@ program
 program
   .command("lint")
   .description(
-    "Run orphan, stray-file, staleness, and contradiction checks on the vault",
+    "Run orphan, stray-file, legacy-Related, staleness, and contradiction checks on the vault",
   )
   .option("--orphans", "Run only the orphan check (free)")
   .option("--strays", "Run only the stray-file check (free)")
   .option(
+    "--legacy-related",
+    "Run only the check for pre-0.12.0 Related sections holding content (free)",
+  )
+  .option(
     "--fix",
-    "Move retitle-duplicate strays into archived/ (other strays are left alone)",
+    "Move retitle-duplicate strays into archived/ (other strays are left alone), and move legacy Related content into ## Details",
   )
   .option("--stale", "Run only the staleness check (free)")
   .option("--contradictions", "Run only the contradiction check (Haiku tokens)")
@@ -746,6 +754,7 @@ program
     runAction(async (opts: {
       orphans?: boolean;
       strays?: boolean;
+      legacyRelated?: boolean;
       fix?: boolean;
       stale?: boolean;
       contradictions?: boolean;
@@ -754,10 +763,15 @@ program
       const db = new StateDb();
       try {
         const runAll =
-          !opts.orphans && !opts.strays && !opts.stale && !opts.contradictions;
+          !opts.orphans &&
+          !opts.strays &&
+          !opts.legacyRelated &&
+          !opts.stale &&
+          !opts.contradictions;
         const checks: string[] = [];
         if (runAll || opts.orphans) checks.push("orphans");
         if (runAll || opts.strays) checks.push("strays");
+        if (runAll || opts.legacyRelated) checks.push("legacy-related");
         if (runAll || opts.stale) checks.push("stale");
         if (runAll || opts.contradictions) checks.push("contradictions");
 
@@ -766,6 +780,7 @@ program
 
         let orphanCount = 0;
         let strayCount = 0;
+        let legacyCount = 0;
         let staleCount = 0;
         let contradictionCount = 0;
         let issues = 0;
@@ -822,6 +837,38 @@ program
           }
         }
 
+        if (runAll || opts.legacyRelated) {
+          const sp = ui.spinner("checking legacy Related sections").start();
+          const r = legacyRelatedCheck(db);
+          sp.stop();
+          const withContent = r.rows.filter((x) => x.kept > 0);
+          legacyCount = r.rows.length;
+          issues += legacyCount;
+          if (legacyCount === 0) {
+            ui.row(ui.success(ui.CHECK), `${ui.text("legacy-related")}  ${ui.dim("none")}`);
+          } else {
+            const bullets = withContent.reduce((n, x) => n + x.kept, 0);
+            ui.row(
+              ui.errorColor(ui.CROSS),
+              `${ui.text("legacy-related")} ${ui.dim(`(${legacyCount} of ${r.scanned} stored notes; ${withContent.length} hold ${bullets} content bullets a rewrite drops)`)}`,
+            );
+            if (opts.fix) {
+              const fixed = await migrateLegacyRelated(db, new VaultWriter(cfg, db));
+              legacyCount -= fixed.migrated;
+              issues -= fixed.migrated;
+              ui.row(
+                ui.success(ui.CHECK),
+                `${ui.text("legacy-related")} ${ui.dim(`moved content into ## Details on ${fixed.migrated} rows, re-rendered ${fixed.rewritten} notes`)}`,
+              );
+              for (const e of fixed.errors) {
+                console.log(`   ${ui.dim(ui.BULLET)} ${ui.errorColor(e.path)}  ${ui.muted(e.message)}`);
+              }
+            } else {
+              console.log(`   ${ui.dim(ui.ARROW)} ${ui.muted("vir lint --legacy-related --fix")}`);
+            }
+          }
+        }
+
         if (runAll || opts.stale) {
           const sp = ui.spinner("checking staleness").start();
           const stale = stalenessCheck(cfg, db);
@@ -874,6 +921,7 @@ program
           },
           orphans: { value: orphanCount, color: ui.muted },
           strays: { value: strayCount, color: ui.muted },
+          "legacy-related": { value: legacyCount, color: ui.muted },
           stale: { value: staleCount, color: ui.muted },
           contradictions: { value: contradictionCount, color: ui.muted },
         });
