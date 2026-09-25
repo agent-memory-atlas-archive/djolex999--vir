@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+**`vir lint --legacy-related [--fix]`: content in old Related sections
+comes back.** Before 0.12.0 the distill prompt asked for a `## Related`
+section, and the model often filled it with content, not links: file paths
+with what lives there, API endpoints, a SQL query. Since 0.12.0 the writer
+strips stored Related and rebuilds it from embedding neighbours, so every
+`--rewrite-only` dropped those bullets from the file. The database still
+held them.
+
+- **`--fix` moves them into `## Details` in stored content**, in the place
+  Related was, then re-renders the affected notes. Old-style topic names
+  ("Supabase SSR authentication in Next.js API routes") and bare wikilinks
+  are still dropped. A bullet counts as a topic name only if it is plain
+  words, at most 8 of them, with no code span, path, colon, dash
+  separator, parentheses, second sentence or verb of assertion. A dropped
+  claim can't be recovered, but a kept topic name only costs a line.
+- **Stored content, not the writer.** Every writer version renders
+  `## Details`, and `vir dedupe` strips Related from the notes it merges,
+  so fixing only the rendering would still lose the content on a merge.
+  Pruned and rejected rows are migrated too, so a restore brings back the
+  migrated text. Archived dedupe losers are left alone, since nothing
+  renders them.
+- **Idempotent.** A migrated row has no Related section, so a second pass
+  selects nothing. `--fix` holds the pipeline lock. It clears each
+  migrated row's embedding, because the embedded text now includes Details.
+  The rewrite re-embeds, and the sweep back-fills anything it couldn't.
+- **Reference vault:** 340 of 430 stored notes carried a Related section,
+  and 336 of them held content: 1313 bullets kept, 146 topic names
+  dropped. All 340 were migrated and 129 serving notes re-rendered, with
+  no files added or removed. A second pass finds nothing.
+
 ## 0.20.0 — 2026-09-25
 
 **A note rejected in `vir review` stops being served.** Review rejected by
