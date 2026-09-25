@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+**A note rejected in `vir review` stops being served.** Review rejected by
+moving the file into `.rejected/`, and SQL cannot see where a file is. The
+row kept serving every read path built on the database: `listDistilled`
+(and so `sync-claude`, summaries, `vir_recent_notes`, dedupe and lint),
+`getStats` and `vir status`, and the embedding sweep. It dropped out of
+search only by accident, because the moved file read as empty content.
+
+- **`rejected_at` on the sessions row**, the same shape as `pruned_at`.
+  The row keeps its content and stays processed, so nothing is re-distilled
+  or re-billed. Every serving query now carries one gate for both states
+  (`servingGate()`). Each clause is only added when its column exists, so
+  the read-only MCP server works on a database that hasn't been migrated.
+- **Backfilled from the files.** `vir run` and `vir review` sync every
+  note in `.rejected/` that carries a `rejected_at` stamp into the
+  database. Notes `vir prune` moved there carry no such stamp and keep
+  their own state.
+- **Rows are matched on the full session id**, never the 8-character
+  filename suffix. Ids are UUIDs or `agent-<hex>`, which 785 rows in the
+  reference DB use; anything outside that alphabet selects nothing, so a
+  hand-edited frontmatter can't slip a `LIKE` wildcard in.
+- **`vir review --restore <note>`** moves one rejected note back, removes
+  its stamp and puts its row back on every read path. It refuses to
+  overwrite a note already at the destination.
+- **Reference vault:** a 2026-09-25 audit rejected 116 notes. `vir status`
+  still counted 296 notes against 180 files. After the sync it counts 180.
+
 ## 0.19.0 — 2026-09-25
 
 **macOS notifications come from vir, not Script Editor.**

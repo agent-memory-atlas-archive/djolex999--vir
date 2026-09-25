@@ -1711,6 +1711,7 @@ program
   .option("--all", "Review all notes, including verified ones")
   .option("--project <slug>", "Filter by project")
   .option("--limit <n>", "Max notes to review in this session", "50")
+  .option("--restore <note>", "Move one rejected note back out of .rejected/")
   .action(runAction(runReview));
 
 program
