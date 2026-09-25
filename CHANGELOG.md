@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+**Notes record which git branches their session ran on.** Each line of a
+Claude Code transcript carries `gitBranch`. The parser now collects them in
+first-seen order and the writer emits a `branches:` list in frontmatter.
+Detached `HEAD` is skipped, and the key is left out when the transcript has
+none.
+
+- **Why now, with nothing reading it yet.** A 2026-09-25 vault audit found
+  notes describing work that never left its branch as if it were live (4
+  of 25 on the current prompt). Whether a branch merged can only be known
+  later, and 69% of 291 recent sessions ran off `main`, so writing "on
+  branch X" into the note would be wrong most of the time within a week.
+  A later check can compare this field against the repo. The field has to
+  be captured now: Claude Code deletes transcripts after about 30 days, and
+  what isn't recorded then can't be backfilled.
+- **`--rewrite-only` keeps the block.** A rewrite has no transcript, so it
+  carries the existing `branches:` list over, the same way it keeps
+  `themes:`.
+- **No LLM change.** The distill prompt, classify and cost are unchanged.
+
 **A note is titled from the note.** The topic, which becomes the filename,
 the alias and the title shown in every retrieval result, used to come from
 classify. Classify reads the session's raw summary before the note exists,

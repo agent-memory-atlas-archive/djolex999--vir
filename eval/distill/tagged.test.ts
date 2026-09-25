@@ -30,7 +30,7 @@ describe("COMBINED.md", () => {
     expect(tpl).toMatch(/first sentence/i);
     expect(tpl).toMatch(/second sentence/i);
     const out = makeBuilder(tpl)(
-      { path: "", hash: "", sessionId: "s", projectSlug: "p", startedAt: null, endedAt: null, lineCount: 0, toolCallCount: 0, filesTouched: [], assistantText: "", userText: "", rawSummary: "", transcriptText: "", isSidechain: false, entrypoint: null },
+      { path: "", hash: "", sessionId: "s", projectSlug: "p", startedAt: null, endedAt: null, lineCount: 0, toolCallCount: 0, filesTouched: [], assistantText: "", userText: "", rawSummary: "", transcriptText: "", isSidechain: false, entrypoint: null, branches: [] },
       { category: "tool", topic: "t", project: "vir", confidence: 1, themes: [] },
       "BODY",
     );
