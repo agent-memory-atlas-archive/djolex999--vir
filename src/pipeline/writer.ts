@@ -17,7 +17,7 @@ import {
   type EmbeddingProvider,
 } from "../search/provider.js";
 import { thresholdsFor } from "../search/thresholds.js";
-import type { StateDb } from "../state/db.js";
+import type { DistilledRow, StateDb } from "../state/db.js";
 import type { Category, DistilledNote, ParsedSession } from "./types.js";
 import type { ParsedArticle } from "./articleReader.js";
 import {
@@ -177,7 +177,14 @@ export class VaultWriter {
         ? strippedBody + renderRelatedSection(related)
         : strippedBody + this.preservedRelatedSection(priorPath);
 
-    const finalContent = frontmatter + wikilinkHeader + body + "\n";
+    // `vir dedupe` appends this section to the file only; it is not in stored
+    // content, and `vir prune` keeps merge winners by finding it on disk.
+    const finalContent =
+      frontmatter +
+      wikilinkHeader +
+      body +
+      this.preservedArchivedSection(priorPath) +
+      "\n";
     writeFileSync(fullPath, finalContent);
 
     // A retitle or recategorisation lands the note on a new path. Retire the
@@ -219,6 +226,43 @@ export class VaultWriter {
       });
     }
     return [fullPath];
+  }
+
+  // Re-render a session note from its stored DB row. Shared by
+  // `vir run --rewrite-only` and `vir dedupe`'s merge path.
+  rewriteRow(row: DistilledRow): Promise<string[]> {
+    const parsed: ParsedSession = {
+      path: row.path,
+      hash: "",
+      sessionId: row.sessionId,
+      projectSlug: row.project,
+      startedAt: row.startedAt,
+      endedAt: null,
+      lineCount: 0,
+      toolCallCount: 0,
+      filesTouched: [],
+      assistantText: "",
+      userText: "",
+      rawSummary: "",
+      transcriptText: "",
+      isSidechain: false,
+      entrypoint: null,
+    };
+    const note: DistilledNote = {
+      classification: {
+        category: row.category,
+        topic: row.topic,
+        project: row.project,
+        confidence: row.confidence,
+        // themes isn't a DB column — a rewrite-only pass carries none, so
+        // write() preserves the existing note's themes block from its
+        // frontmatter (like the review fields). A --full re-distill re-emits
+        // fresh themes.
+        themes: [],
+      },
+      markdown: row.content,
+    };
+    return this.write(parsed, note, "rewrite");
   }
 
   // Write a distilled web article into articles/<slug>.md. Parallel to write()
@@ -571,6 +615,28 @@ export class VaultWriter {
     );
     if (bulletsEnd === -1) return "";
     return `\n\n## Related\n\n${out.slice(0, bulletsEnd + 1).join("\n").trim()}`;
+  }
+
+  // The existing note's `## Archived Duplicates` block, verbatim. Heading and
+  // bullets stay adjacent: merger.ts appends to the block with that shape.
+  private preservedArchivedSection(fullPath: string): string {
+    if (!existsSync(fullPath)) return "";
+    let content: string;
+    try {
+      content = readFileSync(fullPath, "utf8");
+    } catch {
+      return "";
+    }
+    const lines = content.split("\n");
+    const start = lines.findIndex((l) => /^##\s+archived duplicates\b/i.test(l));
+    if (start === -1) return "";
+    const out: string[] = [];
+    for (const line of lines.slice(start + 1)) {
+      if (/^#{1,6}\s+/.test(line)) break;
+      if (line.trim().length > 0) out.push(line);
+    }
+    if (out.length === 0) return "";
+    return `\n\n## Archived Duplicates\n${out.join("\n")}`;
   }
 
   private preservedReviewFields(fullPath: string): string[] {
