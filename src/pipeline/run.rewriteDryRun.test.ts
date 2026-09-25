@@ -2,13 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../config.js";
 import { runPipeline } from "./run.js";
 
-// --rewrite-only --dry-run must suppress every write (rewriteOne → writer.write,
-// and writer.regenerateIndex) while still reporting how many notes it WOULD
-// rewrite. rewriteOne is module-private and its only side effect is
-// writer.write, so the spies sit on the VaultWriter boundary.
+// --rewrite-only --dry-run must suppress every write (writer.rewriteRow and
+// writer.regenerateIndex) while still reporting how many notes it WOULD
+// rewrite. The spies sit on the VaultWriter boundary.
 
 const spies = vi.hoisted(() => {
-  const write = vi.fn(async (): Promise<string[]> => []);
+  const rewriteRow = vi.fn(async (): Promise<string[]> => []);
   const regenerateIndex = vi.fn();
   const uiSummary = vi.fn();
   const uiLine = vi.fn();
@@ -29,13 +28,13 @@ const spies = vi.hoisted(() => {
       content: "## Summary\nbody",
     };
   }
-  return { write, regenerateIndex, uiSummary, uiLine, rows };
+  return { rewriteRow, regenerateIndex, uiSummary, uiLine, rows };
 });
 
 vi.mock("./writer.js", () => ({
   kebab: (s: string) => s,
   VaultWriter: class {
-    write = spies.write;
+    rewriteRow = spies.rewriteRow;
     regenerateIndex = spies.regenerateIndex;
   },
 }));
@@ -80,7 +79,7 @@ function cfg(): Config {
 
 describe("runPipeline --rewrite-only --dry-run", () => {
   beforeEach(() => {
-    spies.write.mockClear();
+    spies.rewriteRow.mockClear();
     spies.regenerateIndex.mockClear();
     spies.uiSummary.mockClear();
     spies.uiLine.mockClear();
@@ -88,7 +87,7 @@ describe("runPipeline --rewrite-only --dry-run", () => {
 
   it("performs zero writes", async () => {
     await runPipeline(cfg(), { rewriteOnly: true, dryRun: true });
-    expect(spies.write).not.toHaveBeenCalled();
+    expect(spies.rewriteRow).not.toHaveBeenCalled();
     expect(spies.regenerateIndex).not.toHaveBeenCalled();
   });
 
@@ -107,7 +106,7 @@ describe("runPipeline --rewrite-only --dry-run", () => {
 
   it("without --dry-run, --rewrite-only still writes (guard is scoped)", async () => {
     await runPipeline(cfg(), { rewriteOnly: true });
-    expect(spies.write).toHaveBeenCalledTimes(3);
+    expect(spies.rewriteRow).toHaveBeenCalledTimes(3);
     expect(spies.regenerateIndex).toHaveBeenCalledTimes(1);
   });
 });

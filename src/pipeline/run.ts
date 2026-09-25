@@ -58,7 +58,7 @@ function isDistilledRow(row: SessionRow | undefined): boolean {
 import { scrub } from "./scrubber.js";
 import { summarizeProject } from "./summarizer.js";
 import { filterToolCalls } from "./toolCallFilter.js";
-import type { DistilledNote, ParsedSession } from "./types.js";
+import type { ParsedSession } from "./types.js";
 import { kebab, VaultWriter } from "./writer.js";
 import { sweepEmbeddings } from "./embeddingSweep.js";
 import { resolveEmbeddingProvider } from "../search/provider.js";
@@ -275,7 +275,7 @@ export async function runPipeline(
       try {
         for (const row of rows) {
           try {
-            const written = await rewriteOne(writer, row);
+            const written = await writer.rewriteRow(row);
             summary.rewritten += 1;
             summary.notesWritten.push(...written);
           } catch (err) {
@@ -291,7 +291,7 @@ export async function runPipeline(
     } else {
       for (const row of rows) {
         try {
-          const written = await rewriteOne(writer, row);
+          const written = await writer.rewriteRow(row);
           summary.rewritten += 1;
           summary.notesWritten.push(...written);
         } catch (err) {
@@ -1508,43 +1508,4 @@ async function runPdfPhase(
       }
     }
   }
-}
-
-async function rewriteOne(
-  writer: VaultWriter,
-  row: import("../state/db.js").DistilledRow,
-): Promise<string[]> {
-  const parsed: ParsedSession = {
-    path: row.path,
-    hash: "",
-    sessionId: row.sessionId,
-    projectSlug: row.project,
-    startedAt: row.startedAt,
-    endedAt: null,
-    lineCount: 0,
-    toolCallCount: 0,
-    filesTouched: [],
-    assistantText: "",
-    userText: "",
-    rawSummary: "",
-    transcriptText: "",
-    isSidechain: false,
-    entrypoint: null,
-    // No transcript here; the writer carries the note's existing block over.
-    branches: [],
-  };
-  const note: DistilledNote = {
-    classification: {
-      category: row.category,
-      topic: row.topic,
-      project: row.project,
-      confidence: row.confidence,
-      // themes isn't a DB column — a rewrite-only pass carries none, so the
-      // writer preserves the existing note's themes block from its frontmatter
-      // (like the review fields). A --full re-distill re-emits fresh themes.
-      themes: [],
-    },
-    markdown: row.content,
-  };
-  return writer.write(parsed, note, "rewrite");
 }
