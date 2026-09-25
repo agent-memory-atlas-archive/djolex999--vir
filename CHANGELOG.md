@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.21.0 — 2026-09-25
+
+**`vir dedupe` merges render like the writer and survive a rewrite.** A
+merged note used to differ from a distilled one, and the next
+`--rewrite-only` quietly took parts of it away.
+
+- **Same output contract as distill.** The merge prompt strips both notes'
+  Related sections before the model sees them, and asks for Summary, What
+  Was Learned and Context only. On conflict the newer note wins, not the
+  higher-confidence one: staleness depends on age. A reply with no
+  `## Summary` throws before any file or row changes.
+- **The winner is re-rendered through the writer** (`rewriteRow`, shared
+  with `--rewrite-only`), so it keeps the `Project:` / `Category:` header
+  and gets neighbour-built Related. The loser is archived first, so it
+  can't be one of those neighbours.
+- **`## Archived Duplicates` survives rewrites.** It lives only in the
+  file, so every rewrite deleted it, and `vir prune` stopped protecting
+  merge winners. `write()` now carries it over. On the reference vault,
+  the vault's backup git history gave the exact winner for 12 archived
+  losers, and those sections were restored by hand.
 
 **`vir lint --legacy-related [--fix]`: content in old Related sections
 comes back.** Before 0.12.0 the distill prompt asked for a `## Related`
