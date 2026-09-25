@@ -516,7 +516,7 @@ improvements. Delete it any time; disable it with `"logQueries": false` in
 |                |                                           |
 | -------------- | ----------------------------------------- |
 | Version        | 0.19.0                                    |
-| Tests          | 777 passing                               |
+| Tests          | 784 passing                               |
 | Platforms      | macOS (launchd), Linux (systemd/cron)     |
 | Node           | 20+                                       |
 | First-run cost | $1 to $5 (Kie.ai optional, ~72% cheaper)  |
